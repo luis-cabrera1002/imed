@@ -24,14 +24,24 @@ export default function Doctors() {
   }, []);
 
   async function loadDoctores() {
-    const { data } = await supabase
+    const { data: dpData } = await supabase
       .from("doctor_profiles")
-      .select(`
-        *,
-        profile:profiles(full_name, phone)
-      `);
+      .select("*");
 
-    if (data) setDoctores(data);
+    if (!dpData) return;
+
+    const userIds = dpData.map(d => d.user_id);
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, phone")
+      .in("user_id", userIds);
+
+    const merged = dpData.map(d => ({
+      ...d,
+      profile: profileData?.find(p => p.user_id === d.user_id) || null
+    }));
+
+    setDoctores(merged);
     setLoading(false);
   }
 

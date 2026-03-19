@@ -28,7 +28,7 @@ export default function Doctors() {
       .from("doctor_profiles")
       .select(`
         *,
-        profile:profiles!doctor_profiles_user_id_fkey(full_name, phone)
+        profile:profiles(full_name, phone)
       `);
 
     if (data) setDoctores(data);

@@ -97,7 +97,7 @@ export default function MyAppointments() {
           <Card>
             <CardContent className="py-10 text-center">
               <p className="text-gray-400 mb-4">No tienes citas agendadas aún.</p>
-              <Button onClick={() => navigate("/doctors")}
+              <Button onClick={() => navigate("/doctores")}
                 className="bg-teal-600 hover:bg-teal-700">
                 Buscar un Doctor
               </Button>

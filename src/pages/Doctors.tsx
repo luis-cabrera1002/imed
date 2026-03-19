@@ -137,7 +137,7 @@ export default function Doctors() {
                   </div>
                   <Button
                     className="w-full mt-3 bg-teal-600 hover:bg-teal-700"
-                    onClick={() => navigate(`/appointments?doctor=${doctor.user_id}`)}>
+                    onClick={() => navigate(`/citas?doctor=${doctor.user_id}`)}>
                     Agendar Cita
                   </Button>
                 </CardContent>

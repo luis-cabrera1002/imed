@@ -91,7 +91,7 @@ export default function Appointments() {
         title: "¡Cita agendada!",
         description: `Tu cita fue agendada para el ${cita.fecha} a las ${cita.hora}.`
       });
-      navigate("/my-appointments");
+      navigate("/mis-citas");
     }
   }
 

@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
@@ -65,6 +63,90 @@ export type Database = {
         }
         Relationships: []
       }
+      doctor_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          especialidad: string | null
+          numero_colegiado: string | null
+          clinica: string | null
+          direccion: string | null
+          telefono: string | null
+          precio_consulta: number | null
+          dias_atencion: string[] | null
+          hora_inicio: string | null
+          hora_fin: string | null
+          bio: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          especialidad?: string | null
+          numero_colegiado?: string | null
+          clinica?: string | null
+          direccion?: string | null
+          telefono?: string | null
+          precio_consulta?: number | null
+          dias_atencion?: string[] | null
+          hora_inicio?: string | null
+          hora_fin?: string | null
+          bio?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          especialidad?: string | null
+          numero_colegiado?: string | null
+          clinica?: string | null
+          direccion?: string | null
+          telefono?: string | null
+          precio_consulta?: number | null
+          dias_atencion?: string[] | null
+          hora_inicio?: string | null
+          hora_fin?: string | null
+          bio?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      citas: {
+        Row: {
+          id: string
+          paciente_id: string
+          doctor_id: string
+          fecha: string
+          hora: string
+          motivo: string | null
+          estado: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          paciente_id: string
+          doctor_id: string
+          fecha: string
+          hora: string
+          motivo?: string | null
+          estado?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          paciente_id?: string
+          doctor_id?: string
+          fecha?: string
+          hora?: string
+          motivo?: string | null
+          estado?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -88,7 +170,6 @@ export type Database = {
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -19,31 +18,30 @@ export default function MyAppointments() {
 
   async function loadCitas() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
+    if (!user) { navigate("/auth"); return; }
 
-    const { data } = await supabase
-      .from("citas")
-      .select(`
-        *,
-        doctor:profiles!citas_doctor_id_fkey(full_name),
-        doctor_perfil:doctor_profiles!citas_doctor_id_fkey(especialidad, clinica, telefono)
-      `)
+    const { data: citasData } = await supabase
+      .from("citas").select("*")
       .eq("paciente_id", user.id)
       .order("fecha", { ascending: true });
 
-    if (data) setCitas(data);
+    if (!citasData || citasData.length === 0) { setLoading(false); return; }
+
+    const doctorIds = [...new Set(citasData.map(c => c.doctor_id))];
+    const { data: perfiles } = await supabase.from("profiles").select("user_id, full_name").in("user_id", doctorIds);
+    const { data: doctorPerfiles } = await supabase.from("doctor_profiles").select("user_id, especialidad, clinica").in("user_id", doctorIds);
+
+    setCitas(citasData.map(cita => ({
+      ...cita,
+      doctor_nombre: perfiles?.find(p => p.user_id === cita.doctor_id)?.full_name || "Doctor",
+      especialidad: doctorPerfiles?.find(p => p.user_id === cita.doctor_id)?.especialidad || "",
+      clinica: doctorPerfiles?.find(p => p.user_id === cita.doctor_id)?.clinica || "",
+    })));
     setLoading(false);
   }
 
   async function cancelarCita(citaId: string) {
-    const { error } = await supabase
-      .from("citas")
-      .update({ estado: "cancelada" })
-      .eq("id", citaId);
-
+    const { error } = await supabase.from("citas").update({ estado: "cancelada" }).eq("id", citaId);
     if (!error) {
       setCitas(citas.map(c => c.id === citaId ? { ...c, estado: "cancelada" } : c));
       toast({ title: "Cita cancelada" });
@@ -52,13 +50,9 @@ export default function MyAppointments() {
 
   function exportarExcel() {
     const datos = citas.map(c => ({
-      "Fecha": c.fecha,
-      "Hora": c.hora,
-      "Doctor": c.doctor?.full_name || "—",
-      "Especialidad": c.doctor_perfil?.especialidad || "—",
-      "Clínica": c.doctor_perfil?.clinica || "—",
-      "Motivo": c.motivo || "—",
-      "Estado": c.estado || "pendiente"
+      "Fecha": c.fecha, "Hora": c.hora, "Doctor": c.doctor_nombre,
+      "Especialidad": c.especialidad, "Clínica": c.clinica,
+      "Motivo": c.motivo || "—", "Estado": c.estado || "pendiente"
     }));
     const ws = XLSX.utils.json_to_sheet(datos);
     const wb = XLSX.utils.book_new();
@@ -74,20 +68,20 @@ export default function MyAppointments() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-teal-600 text-white p-4">
+      <div className="bg-blue-900 text-white p-4">
         <div className="max-w-2xl mx-auto flex justify-between items-center">
           <h1 className="text-xl font-bold">Mis Citas</h1>
           <div className="flex gap-2">
             {citas.length > 0 && (
-              <Button variant="outline" className="text-white border-white text-sm"
-                onClick={exportarExcel}>
+              <button onClick={exportarExcel}
+                className="bg-white text-blue-900 font-semibold px-4 py-2 rounded-lg text-sm hover:bg-blue-50 transition">
                 Exportar Excel
-              </Button>
+              </button>
             )}
-            <Button variant="outline" className="text-white border-white"
-              onClick={() => navigate("/")}>
+            <button onClick={() => navigate("/")}
+              className="bg-blue-950 text-white font-semibold px-4 py-2 rounded-lg text-sm hover:bg-blue-950 transition">
               Inicio
-            </Button>
+            </button>
           </div>
         </div>
       </div>
@@ -97,10 +91,10 @@ export default function MyAppointments() {
           <Card>
             <CardContent className="py-10 text-center">
               <p className="text-gray-400 mb-4">No tienes citas agendadas aún.</p>
-              <Button onClick={() => navigate("/doctores")}
-                className="bg-teal-600 hover:bg-teal-700">
+              <button onClick={() => navigate("/doctores")}
+                className="bg-blue-900 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-950 transition">
                 Buscar un Doctor
-              </Button>
+              </button>
             </CardContent>
           </Card>
         ) : (
@@ -109,15 +103,11 @@ export default function MyAppointments() {
               <CardContent className="pt-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-semibold">{cita.doctor?.full_name || "Doctor"}</p>
-                    <p className="text-teal-600 text-sm">{cita.doctor_perfil?.especialidad}</p>
+                    <p className="font-semibold">{cita.doctor_nombre}</p>
+                    <p className="text-blue-900 text-sm">{cita.especialidad}</p>
                     <p className="text-sm text-gray-500">{cita.fecha} a las {cita.hora}</p>
-                    {cita.doctor_perfil?.clinica && (
-                      <p className="text-sm text-gray-500">{cita.doctor_perfil.clinica}</p>
-                    )}
-                    {cita.motivo && (
-                      <p className="text-sm text-gray-600 mt-1">Motivo: {cita.motivo}</p>
-                    )}
+                    {cita.clinica && <p className="text-sm text-gray-500">{cita.clinica}</p>}
+                    {cita.motivo && <p className="text-sm text-gray-600 mt-1">Motivo: {cita.motivo}</p>}
                   </div>
                   <div className="flex flex-col gap-2 items-end">
                     <Badge className={
@@ -128,11 +118,10 @@ export default function MyAppointments() {
                       {cita.estado || "pendiente"}
                     </Badge>
                     {cita.estado !== "cancelada" && (
-                      <Button size="sm" variant="outline"
-                        className="text-red-600 border-red-300 text-xs"
-                        onClick={() => cancelarCita(cita.id)}>
+                      <button onClick={() => cancelarCita(cita.id)}
+                        className="text-red-600 border border-red-300 px-3 py-1 rounded-lg text-xs hover:bg-red-50 transition">
                         Cancelar
-                      </Button>
+                      </button>
                     )}
                   </div>
                 </div>

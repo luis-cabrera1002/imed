@@ -1,61 +1,92 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import ClinicCard from "@/components/ClinicCard";
-import DoctorCard from "@/components/DoctorCard";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Calendar, Stethoscope, Activity, Heart, Shield, Pill, ArrowRight } from "lucide-react";
-import {
-  clinics,
-  doctors,
-  getTopRatedClinics,
-  getTopRatedDoctors,
-  getAllSpecialties,
-} from "@/data/mockData";
-import { Specialty } from "@/types";
-import SpecialtySection from "@/components/SpecialtySection";
+import { Search, MapPin, Calendar, Stethoscope, Activity, Heart, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+
+const ESPECIALIDADES = [
+  "Cardiología", "Pediatría", "Dermatología", "Ginecología",
+  "Neurología", "Ortopedia", "Oftalmología", "Psiquiatría",
+  "Medicina General", "Cirugía General", "Urología", "Endocrinología",
+  "Gastroenterología", "Reumatología", "Oncología", "Radiología",
+  "Medicina Interna", "Nutrición", "Odontología", "Traumatología"
+];
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [topClinics, setTopClinics] = useState(getTopRatedClinics(3));
-  const [topDoctors, setTopDoctors] = useState(getTopRatedDoctors(3));
-  const [specialties, setSpecialties] = useState<Specialty[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [doctorCount, setDoctorCount] = useState<number | null>(null);
   const navigate = useNavigate();
+  const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const allSpecialties = getAllSpecialties();
-    setSpecialties(allSpecialties.slice(0, 3) as Specialty[]);
+    const fetchDoctorCount = async () => {
+      const { count } = await supabase
+        .from("doctor_profiles")
+        .select("*", { count: "exact", head: true });
+      setDoctorCount(count ?? 0);
+    };
+    fetchDoctorCount();
   }, []);
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      navigate(`/clinicas?q=${searchQuery}`);
+  // Cerrar sugerencias al hacer click afuera
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSuggestions([]);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    if (val.trim().length >= 2) {
+      const filtered = ESPECIALIDADES.filter(e =>
+        e.toLowerCase().includes(val.toLowerCase())
+      );
+      setSuggestions(filtered.slice(0, 6));
+    } else {
+      setSuggestions([]);
     }
   };
 
+  const handleSearch = () => {
+    setSuggestions([]);
+    if (searchQuery.trim()) {
+      navigate(`/doctores?q=${encodeURIComponent(searchQuery)}`);
+    } else {
+      navigate("/doctores");
+    }
+  };
+
+  const selectSuggestion = (s: string) => {
+    setSearchQuery(s);
+    setSuggestions([]);
+    navigate(`/doctores?q=${encodeURIComponent(s)}`);
+  };
+
   const stats = [
-    { label: "Doctores", value: `${doctors.length}+`, icon: Stethoscope },
-    { label: "Clínicas", value: `${clinics.length}+`, icon: MapPin },
-    { label: "Especialidades", value: `${getAllSpecialties().length}`, icon: Activity },
+    { label: "Doctores", value: doctorCount !== null ? `${doctorCount}+` : "...", icon: Stethoscope },
+    { label: "Especialidades", value: "20+", icon: Activity },
+    { label: "Guatemala", value: "🇬🇹", icon: MapPin },
   ];
 
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1">
-        {/* Hero Section */}
         <section className="relative overflow-hidden">
           <div className="bg-[image:var(--gradient-hero)] py-20 md:py-28 relative">
-            {/* Decorative elements */}
             <div className="absolute inset-0 overflow-hidden">
               <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
               <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] rounded-full bg-secondary/10 blur-3xl" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-accent/5 blur-3xl" />
             </div>
-
             <div className="container px-4 mx-auto text-center sm:px-6 lg:px-8 relative z-10">
               <div className="animate-fade-in">
                 <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 text-white/90 text-sm font-medium mb-6 backdrop-blur-sm border border-white/10">
@@ -63,36 +94,51 @@ const Index = () => {
                   Tu salud, nuestra prioridad
                 </span>
               </div>
-              
               <h1 className="text-4xl font-bold text-white sm:text-5xl md:text-6xl lg:text-7xl mb-6 animate-fade-in font-display leading-tight">
                 Tu salud, a un clic
                 <br />
-                <span className="text-cyan-light">de distancia</span>
+                <span className="text-cyan-300">de distancia</span>
               </h1>
               <p className="max-w-2xl mx-auto text-lg text-white/80 mb-10 animate-fade-in font-body">
-                Accede a los mejores médicos, clínicas y especialistas de Guatemala en un solo lugar. Agenda citas, consulta tu seguro y más.
+                Accede a los mejores médicos y especialistas de Guatemala en un solo lugar. Agenda citas y más.
               </p>
-              
-              {/* Search Bar */}
-              <div className="max-w-3xl mx-auto mb-14 animate-fade-in-up">
-                <div className="flex flex-col gap-3 sm:flex-row bg-white/95 backdrop-blur-md p-2 rounded-2xl shadow-2xl shadow-black/20">
+
+              {/* Search Bar con autocompletado */}
+              <div className="max-w-3xl mx-auto mb-14 animate-fade-in-up" ref={searchRef}>
+                <div className="relative flex flex-col gap-3 sm:flex-row bg-white/95 backdrop-blur-md p-2 rounded-2xl shadow-2xl shadow-black/20">
                   <div className="relative flex-1">
                     <Search className="absolute w-5 h-5 text-muted-foreground transform -translate-y-1/2 left-4 top-1/2" />
                     <Input
                       className="pl-12 h-14 text-lg border-0 focus-visible:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground"
-                      placeholder="Buscar médicos, clínicas o especialidades..."
+                      placeholder="Buscar médicos o especialidades..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                      onChange={(e) => handleSearchChange(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     />
                   </div>
-                  <Button 
-                    size="lg" 
-                    className="h-14 px-8 text-lg font-semibold bg-gradient-to-r from-primary to-navy-light hover:opacity-90 rounded-xl shadow-lg transition-all"
+                  <Button
+                    size="lg"
+                    className="h-14 px-8 text-lg font-semibold bg-gradient-to-r from-primary to-blue-900 hover:opacity-90 rounded-xl shadow-lg transition-all text-white"
                     onClick={handleSearch}
                   >
                     Buscar
                   </Button>
+
+                  {/* Sugerencias */}
+                  {suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                      {suggestions.map((s) => (
+                        <button
+                          key={s}
+                          className="w-full text-left px-5 py-3 text-gray-800 hover:bg-blue-50 hover:text-blue-900 text-base font-medium transition-colors border-b border-gray-100 last:border-0 flex items-center gap-3"
+                          onMouseDown={() => selectSuggestion(s)}
+                        >
+                          <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -114,10 +160,10 @@ const Index = () => {
               {/* Quick Access Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto animate-fade-in-up">
                 {[
-                  { to: "/clinicas", icon: MapPin, label: "Clínicas", desc: "Centros médicos cerca de ti", color: "from-primary/20 to-primary/5" },
-                  { to: "/doctores", icon: Stethoscope, label: "Médicos", desc: "Especialistas certificados", color: "from-secondary/20 to-secondary/5" },
+                  { to: "/doctores", icon: Stethoscope, label: "Médicos", desc: "Especialistas certificados", color: "from-primary/20 to-primary/5" },
+                  { to: "/mapa-doctores", icon: MapPin, label: "Mapa", desc: "Doctores cerca de ti", color: "from-secondary/20 to-secondary/5" },
                   { to: "/citas", icon: Calendar, label: "Agendar Cita", desc: "Reserva en minutos", color: "from-accent/20 to-accent/5" },
-                  { to: "/mi-seguro", icon: Shield, label: "Mi Seguro", desc: "Consulta tu cobertura", color: "from-cyan/20 to-cyan/5" },
+                  { to: "/guia-adultos", icon: Heart, label: "Guía Adultos", desc: "Ayuda paso a paso", color: "from-cyan-500/20 to-cyan-500/5" },
                 ].map((item) => (
                   <Link key={item.to} to={item.to}>
                     <Card className="group hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 cursor-pointer bg-white/90 backdrop-blur-sm border border-white/50 hover:border-primary/30">
@@ -136,43 +182,18 @@ const Index = () => {
           </div>
           <div className="absolute left-0 right-0 z-10 h-16 -bottom-1">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-full" preserveAspectRatio="none">
-              <path
-                fill="hsl(var(--background))"
-                d="M0,60L80,55C160,50,320,40,480,45C640,50,800,70,960,75C1120,80,1280,70,1360,65L1440,60L1440,120L0,120Z"
-              />
+              <path fill="hsl(var(--background))" d="M0,60L80,55C160,50,320,40,480,45C640,50,800,70,960,75C1120,80,1280,70,1360,65L1440,60L1440,120L0,120Z" />
             </svg>
           </div>
         </section>
 
-        {/* Featured Clinics */}
+        {/* Médicos reales */}
         <section className="py-16 mt-4">
           <div className="container px-4 mx-auto sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold font-display text-foreground">Clínicas destacadas</h2>
-                <p className="text-muted-foreground mt-1">Los mejores centros médicos de Guatemala</p>
-              </div>
-              <Link to="/clinicas">
-                <Button variant="ghost" className="gap-1 text-primary hover:text-primary/80">
-                  Ver todas <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {topClinics.map((clinic) => (
-                <ClinicCard key={clinic.id} clinic={clinic} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Featured Doctors */}
-        <section className="py-16 bg-gradient-to-b from-muted/30 to-background">
-          <div className="container px-4 mx-auto sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-2xl md:text-3xl font-bold font-display text-foreground">Médicos destacados</h2>
-                <p className="text-muted-foreground mt-1">Profesionales con las mejores calificaciones</p>
+                <h2 className="text-2xl md:text-3xl font-bold font-display text-foreground">Médicos en iMed</h2>
+                <p className="text-muted-foreground mt-1">Profesionales verificados en Guatemala</p>
               </div>
               <Link to="/doctores">
                 <Button variant="ghost" className="gap-1 text-primary hover:text-primary/80">
@@ -180,41 +201,14 @@ const Index = () => {
                 </Button>
               </Link>
             </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {topDoctors.map((doctor) => (
-                <DoctorCard key={doctor.id} doctor={doctor} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Top Doctors by Specialty */}
-        <section className="py-16">
-          <div className="container px-4 mx-auto sm:px-6 lg:px-8">
-            <h2 className="mb-8 text-2xl md:text-3xl font-bold font-display text-foreground">Los mejores especialistas</h2>
-            <div className="space-y-12">
-              {specialties.map((specialty) => (
-                <SpecialtySection
-                  key={specialty}
-                  specialty={specialty}
-                  doctors={doctors}
-                />
-              ))}
-              <div className="text-center">
-                <Link to="/especialidades">
-                  <Button variant="outline" className="gap-2 rounded-xl">
-                    Ver todas las especialidades
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <RealDoctorCards />
             </div>
           </div>
         </section>
 
         {/* CTA */}
         <section className="py-16 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[image:var(--gradient-hero)] opacity-5" />
           <div className="container px-4 mx-auto text-center sm:px-6 lg:px-8 relative z-10">
             <div className="max-w-3xl mx-auto">
               <div className="inline-flex p-3 rounded-2xl bg-primary/10 mb-6">
@@ -224,19 +218,19 @@ const Index = () => {
                 Agenda tu cita médica en minutos
               </h2>
               <p className="max-w-2xl mx-auto mt-4 text-muted-foreground">
-                Con iMed puedes agendar citas con los mejores especialistas, verificar disponibilidad en tiempo real y gestionar tus seguros médicos.
+                Con iMed puedes agendar citas con los mejores especialistas y gestionar tu salud desde tu celular.
               </p>
               <div className="flex flex-wrap justify-center gap-4 mt-8">
-                <Link to="/citas">
-                  <Button size="lg" className="flex items-center gap-2 bg-gradient-to-r from-primary to-navy-light rounded-xl shadow-lg hover:shadow-xl transition-all">
-                    <Calendar className="w-5 h-5" />
-                    Agendar Cita Ahora
+                <Link to="/doctores">
+                  <Button size="lg" className="flex items-center gap-2 bg-gradient-to-r from-primary to-blue-900 rounded-xl shadow-lg hover:shadow-xl transition-all text-white">
+                    <Stethoscope className="w-5 h-5" />
+                    Buscar un Médico
                   </Button>
                 </Link>
-                <Link to="/clinicas">
+                <Link to="/mapa-doctores">
                   <Button variant="outline" size="lg" className="flex items-center gap-2 rounded-xl">
                     <MapPin className="w-5 h-5" />
-                    Explorar clínicas en el mapa
+                    Ver Mapa de Doctores
                   </Button>
                 </Link>
               </div>
@@ -246,6 +240,116 @@ const Index = () => {
       </main>
       <Footer />
     </div>
+  );
+};
+
+const RealDoctorCards = () => {
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      const { data } = await supabase
+        .from("doctor_profiles")
+        .select("id, user_id, especialidad, clinica, precio_consulta")
+        .limit(3);
+
+      if (data && data.length > 0) {
+        const userIds = data.map((d) => d.user_id);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", userIds);
+
+        const profileMap: Record<string, string> = {};
+        (profiles ?? []).forEach((p: any) => { profileMap[p.user_id] = p.full_name; });
+
+        setDoctors(data.map((d) => ({ ...d, full_name: profileMap[d.user_id] || "Doctor iMed" })));
+      }
+      setLoading(false);
+    };
+    fetchDoctors();
+  }, []);
+
+  if (loading) {
+    return (
+      <>
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="border-border/50">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-24 h-24 rounded-2xl bg-muted animate-pulse" />
+                <div className="h-5 w-32 bg-muted animate-pulse rounded" />
+                <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </>
+    );
+  }
+
+  if (doctors.length === 0) {
+    return (
+      <div className="col-span-3 text-center py-12 text-muted-foreground">
+        <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-30" />
+        <p>Los doctores aparecerán aquí cuando se registren.</p>
+        <Link to="/auth">
+          <Button className="mt-4 bg-primary text-white">Registrarse como Doctor</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {doctors.map((doctor) => (
+        <Card
+          key={doctor.id}
+          className="overflow-hidden transition-all duration-300 hover:shadow-lg cursor-pointer group border-border/50 hover:border-primary/20"
+          onClick={() => navigate(`/doctores/${doctor.user_id}`)}
+        >
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-900/20 flex items-center justify-center ring-4 ring-primary/10">
+                <Stethoscope className="w-10 h-10 text-primary" />
+              </div>
+              <h3 className="mt-4 font-bold text-lg text-center group-hover:text-primary transition-colors font-display">
+                {doctor.full_name}
+              </h3>
+              <span className="mt-2 text-xs px-3 py-1 rounded-full border border-primary/30 text-primary font-medium">
+                {doctor.especialidad || "Medicina General"}
+              </span>
+              {doctor.clinica && (
+                <p className="mt-2 text-sm text-muted-foreground text-center">{doctor.clinica}</p>
+              )}
+              {doctor.precio_consulta && (
+                <p className="mt-1 text-sm font-semibold text-green-600">Q{doctor.precio_consulta}</p>
+              )}
+              <div className="w-full mt-4 space-y-2">
+                <Button
+                  className="w-full rounded-xl bg-gradient-to-r from-primary to-blue-900 hover:opacity-90 text-white"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/citas?doctor=${doctor.user_id}`); }}
+                >
+                  <Calendar className="w-3 h-3 mr-1" />
+                  Agendar Cita
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full rounded-xl"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/doctores/${doctor.user_id}`); }}
+                >
+                  Ver Perfil Completo
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </>
   );
 };
 

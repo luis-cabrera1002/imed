@@ -59,6 +59,7 @@ const Header = () => {
 
   const servicesItems = [
     { to: "/citas", label: "Agendar Cita", icon: Calendar },
+    { to: "/medicos-bam", label: "Red BAM", icon: Shield },
     { to: "/mis-citas", label: "Mis Citas", icon: Clock },
     { to: "/medicinas", label: "Medicinas", icon: Pill },
     { to: "/mis-recetas", label: "Mis Recetas", icon: FileText },

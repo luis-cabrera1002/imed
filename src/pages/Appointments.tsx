@@ -103,7 +103,7 @@ export default function Appointments() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-teal-600 text-white p-4">
+      <div className="bg-blue-900 text-white p-4">
         <div className="max-w-2xl mx-auto flex justify-between items-center">
           <h1 className="text-xl font-bold">Agendar Cita</h1>
           <Button variant="outline" className="text-white border-white"
@@ -118,7 +118,7 @@ export default function Appointments() {
           <Card>
             <CardContent className="pt-4">
               <h2 className="font-semibold text-lg">{doctor.full_name}</h2>
-              <p className="text-teal-600">{doctorPerfil.especialidad}</p>
+              <p className="text-blue-900">{doctorPerfil.especialidad}</p>
               {doctorPerfil.clinica && <p className="text-sm text-gray-500">{doctorPerfil.clinica}</p>}
               {doctorPerfil.direccion && <p className="text-sm text-gray-500">{doctorPerfil.direccion}</p>}
               {doctorPerfil.precio_consulta && (
@@ -157,7 +157,7 @@ export default function Appointments() {
                 rows={3} />
             </div>
             <Button onClick={agendarCita} disabled={saving}
-              className="w-full bg-teal-600 hover:bg-teal-700">
+              className="w-full bg-blue-900 hover:bg-blue-950">
               {saving ? "Agendando..." : "Confirmar Cita"}
             </Button>
           </CardContent>

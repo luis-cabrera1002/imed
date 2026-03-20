@@ -28,7 +28,8 @@ const Index = () => {
       const { count } = await supabase
         .from("doctor_profiles")
         .select("*", { count: "exact", head: true });
-      setDoctorCount(count ?? 0);
+      const { count: bamCount } = await supabase.from("bam_doctors").select("*", { count: "exact", head: true });
+      setDoctorCount((count ?? 0) + (bamCount ?? 0));
     };
     fetchDoctorCount();
   }, []);

@@ -77,24 +77,40 @@ export default function DoctorMap() {
 
   async function loadDoctores() {
     const { data: dpData } = await supabase.from("doctor_profiles").select("*").not("latitud", "is", null);
-    if (!dpData) { setLoading(false); return; }
+    const { data: bamData } = await supabase.from("bam_doctors").select("*").not("latitud", "is", null).limit(656);
 
-    const userIds = dpData.map(d => d.user_id);
-    const { data: profileData } = await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds);
+    const userIds = (dpData || []).map(d => d.user_id);
+    const { data: profileData } = userIds.length > 0
+      ? await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds)
+      : { data: [] };
     const { data: opinionesData } = await supabase.from("opiniones").select("doctor_id, rating");
 
-    const merged = dpData.map(d => {
+    const registrados = (dpData || []).map(d => {
       const ops = opinionesData?.filter(o => o.doctor_id === d.user_id) || [];
       const avgRating = ops.length > 0 ? ops.reduce((s, o) => s + o.rating, 0) / ops.length : 0;
       return {
         ...d,
         nombre: profileData?.find(p => p.user_id === d.user_id)?.full_name || "Doctor",
         rating: avgRating,
-        total_opiniones: ops.length
+        total_opiniones: ops.length,
+        tipo: "registrado"
       };
     });
 
-    setDoctores(merged);
+    const bam = (bamData || []).map(d => ({
+      ...d,
+      latitud: d.latitud,
+      longitud: d.longitud,
+      nombre: d.nombre,
+      especialidad: d.especialidad,
+      direccion: d.direccion,
+      telefono: d.telefono,
+      rating: 0,
+      total_opiniones: 0,
+      tipo: "bam"
+    }));
+
+    setDoctores([...registrados, ...bam]);
     setLoading(false);
   }
 

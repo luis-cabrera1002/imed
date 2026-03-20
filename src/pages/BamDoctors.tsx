@@ -108,7 +108,7 @@ const BamDoctors = () => {
               <p className="text-gray-600 mb-4 font-medium">{doctors.length} doctores encontrados</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {doctors.map(d => (
-                  <Card key={d.id} className="bg-white hover:shadow-md transition-shadow border-gray-200">
+                  <Card key={d.id} className="bg-white hover:shadow-md transition-shadow border-gray-200 cursor-pointer" onClick={() => navigate(`/medicos-bam/${d.id}`)}>
                     <CardContent className="p-5">
                       <div className="flex items-start gap-3">
                         <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">

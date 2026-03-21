@@ -6,34 +6,44 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from "xlsx";
+import {
+  User, Calendar, DollarSign, Star, Clock, CheckCircle, XCircle,
+  AlertCircle, TrendingUp, Users, Stethoscope, MapPin, Phone,
+  Edit, Save, LogOut, ChevronRight, Activity
+} from "lucide-react";
 
 const ESPECIALIDADES = [
-  "Medicina General", "Pediatría", "Ginecología", "Cardiología",
-  "Dermatología", "Traumatología", "Neurología", "Psiquiatría",
-  "Oftalmología", "Odontología", "Nutrición", "Fisioterapia",
-  "Urología", "Endocrinología", "Gastroenterología"
+  "Medicina General","Pediatría","Ginecología","Cardiología","Dermatología",
+  "Traumatología","Neurología","Psiquiatría","Oftalmología","Odontología",
+  "Nutrición","Fisioterapia","Urología","Endocrinología","Gastroenterología"
 ];
+const DIAS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 
-const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+const ESTADO_CONFIG = {
+  pendiente:   { label: "Pendiente",   color: "bg-yellow-100 text-yellow-800", icon: AlertCircle },
+  confirmada:  { label: "Confirmada",  color: "bg-blue-100 text-blue-800",    icon: CheckCircle },
+  completada:  { label: "Completada",  color: "bg-green-100 text-green-800",  icon: CheckCircle },
+  cancelada:   { label: "Cancelada",   color: "bg-red-100 text-red-800",      icon: XCircle },
+};
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [citas, setCitas] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"perfil" | "citas">("perfil");
-  const [ubicacionStatus, setUbicacionStatus] = useState<string>("");
-
+  const [citas, setCitas] = useState([]);
+  const [opiniones, setOpiniones] = useState([]);
+  const [activeTab, setActiveTab] = useState("inicio");
+  const [fullName, setFullName] = useState("");
+  const [citaFilter, setCitaFilter] = useState("todas");
   const [perfil, setPerfil] = useState({
     especialidad: "", numero_colegiado: "", clinica: "", direccion: "",
-    telefono: "", precio_consulta: "", dias_atencion: [] as string[],
+    telefono: "", precio_consulta: "", dias_atencion: [],
     hora_inicio: "08:00", hora_fin: "17:00", bio: "",
-    latitud: null as number | null, longitud: null as number | null,
-    direccion_completa: ""
+    latitud: null, longitud: null, direccion_completa: ""
   });
 
   useEffect(() => { checkUser(); }, []);
@@ -42,296 +52,424 @@ export default function DoctorDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { navigate("/auth"); return; }
     setUser(user);
-    await loadPerfil(user.id);
-    await loadCitas(user.id);
+    await Promise.all([loadPerfil(user.id), loadCitas(user.id), loadOpiniones(user.id), loadFullName(user.id)]);
     setLoading(false);
   }
 
-  async function loadPerfil(userId: string) {
+  async function loadFullName(userId) {
+    const { data } = await supabase.from("profiles").select("full_name").eq("user_id", userId).single();
+    if (data) setFullName(data.full_name || "");
+  }
+
+  async function loadPerfil(userId) {
     const { data } = await supabase.from("doctor_profiles").select("*").eq("user_id", userId).single();
+    if (data) setPerfil({
+      especialidad: data.especialidad || "", numero_colegiado: data.numero_colegiado || "",
+      clinica: data.clinica || "", direccion: data.direccion || "",
+      telefono: data.telefono || "", precio_consulta: data.precio_consulta?.toString() || "",
+      dias_atencion: data.dias_atencion || [], hora_inicio: data.hora_inicio || "08:00",
+      hora_fin: data.hora_fin || "17:00", bio: data.bio || "",
+      latitud: data.latitud || null, longitud: data.longitud || null,
+      direccion_completa: data.direccion_completa || ""
+    });
+  }
+
+  async function loadCitas(userId) {
+    const { data } = await supabase.from("citas").select("*").eq("doctor_id", userId).order("fecha", { ascending: false });
     if (data) {
-      setPerfil({
-        especialidad: data.especialidad || "", numero_colegiado: data.numero_colegiado || "",
-        clinica: data.clinica || "", direccion: data.direccion || "",
-        telefono: data.telefono || "", precio_consulta: data.precio_consulta?.toString() || "",
-        dias_atencion: data.dias_atencion || [], hora_inicio: data.hora_inicio || "08:00",
-        hora_fin: data.hora_fin || "17:00", bio: data.bio || "",
-        latitud: data.latitud || null, longitud: data.longitud || null,
-        direccion_completa: data.direccion_completa || ""
-      });
-      if (data.latitud && data.longitud) setUbicacionStatus("✅ Ubicación guardada correctamente");
+      const patientIds = [...new Set(data.map(c => c.paciente_id))];
+      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name").in("user_id", patientIds);
+      const pm = {};
+      (profiles || []).forEach(p => { pm[p.user_id] = p.full_name; });
+      setCitas(data.map(c => ({ ...c, paciente_nombre: pm[c.paciente_id] || "Paciente" })));
     }
   }
 
-  async function loadCitas(userId: string) {
-    const { data: citasData } = await supabase.from("citas").select("*").eq("doctor_id", userId).order("fecha", { ascending: true });
-    if (!citasData || citasData.length === 0) return;
-    const pacienteIds = [...new Set(citasData.map(c => c.paciente_id))];
-    const { data: perfiles } = await supabase.from("profiles").select("user_id, full_name, phone").in("user_id", pacienteIds);
-    setCitas(citasData.map(cita => ({
-      ...cita,
-      paciente_nombre: perfiles?.find(p => p.user_id === cita.paciente_id)?.full_name || "Paciente",
-      paciente_telefono: perfiles?.find(p => p.user_id === cita.paciente_id)?.phone || ""
-    })));
-  }
-
-  async function detectarUbicacion() {
-    if (!navigator.geolocation) {
-      toast({ title: "Tu navegador no soporta geolocalización", variant: "destructive" });
-      return;
-    }
-    setUbicacionStatus("⏳ Detectando ubicación...");
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
-          const data = await res.json();
-          const dir = data.display_name || `${lat}, ${lng}`;
-          setPerfil(prev => ({ ...prev, latitud: lat, longitud: lng, direccion_completa: dir }));
-          setUbicacionStatus("✅ Ubicación detectada: " + dir.substring(0, 60) + "...");
-          toast({ title: "Ubicación detectada correctamente" });
-        } catch {
-          setPerfil(prev => ({ ...prev, latitud: lat, longitud: lng }));
-          setUbicacionStatus("✅ Ubicación detectada");
-        }
-      },
-      () => {
-        setUbicacionStatus("❌ No se pudo obtener la ubicación. Permite el acceso en tu navegador.");
-        toast({ title: "Permiso de ubicación denegado", variant: "destructive" });
-      }
-    );
+  async function loadOpiniones(userId) {
+    const { data } = await supabase.from("opiniones").select("*").eq("doctor_id", userId).order("created_at", { ascending: false });
+    if (data) setOpiniones(data);
   }
 
   async function savePerfil() {
-    if (!perfil.especialidad) {
-      toast({ title: "Selecciona una especialidad", variant: "destructive" }); return;
-    }
-    if (!perfil.latitud || !perfil.longitud) {
-      toast({ title: "Falta tu ubicación", description: "Haz clic en 'Detectar mi ubicación' antes de guardar.", variant: "destructive" }); return;
-    }
+    if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("doctor_profiles").upsert({
+    const payload = {
       user_id: user.id, especialidad: perfil.especialidad, numero_colegiado: perfil.numero_colegiado,
       clinica: perfil.clinica, direccion: perfil.direccion, telefono: perfil.telefono,
       precio_consulta: perfil.precio_consulta ? parseFloat(perfil.precio_consulta) : null,
       dias_atencion: perfil.dias_atencion, hora_inicio: perfil.hora_inicio, hora_fin: perfil.hora_fin,
       bio: perfil.bio, latitud: perfil.latitud, longitud: perfil.longitud,
       direccion_completa: perfil.direccion_completa, updated_at: new Date().toISOString()
-    }, { onConflict: "user_id" });
+    };
+    const { error } = await supabase.from("doctor_profiles").upsert(payload, { onConflict: "user_id" });
+    if (error) { toast({ title: "Error al guardar", description: error.message, variant: "destructive" }); }
+    else { toast({ title: "✅ Perfil guardado", description: "Tu información fue actualizada." }); }
     setSaving(false);
-    if (error) toast({ title: "Error al guardar", description: error.message, variant: "destructive" });
-    else toast({ title: "¡Perfil guardado!", description: "Tu información ha sido actualizada." });
   }
 
-  async function actualizarEstadoCita(citaId: string, nuevoEstado: string) {
-    const { error } = await supabase.from("citas").update({ estado: nuevoEstado }).eq("id", citaId);
+  async function updateCitaEstado(citaId, estado) {
+    const { error } = await supabase.from("citas").update({ estado }).eq("id", citaId);
     if (!error) {
-      setCitas(citas.map(c => c.id === citaId ? { ...c, estado: nuevoEstado } : c));
-      toast({ title: "Cita actualizada" });
+      setCitas(prev => prev.map(c => c.id === citaId ? { ...c, estado } : c));
+      toast({ title: "Cita actualizada", description: `Estado cambiado a ${estado}` });
     }
   }
 
-  function exportarExcel() {
-    const datos = citas.map(c => ({
-      "Fecha": c.fecha, "Hora": c.hora, "Paciente": c.paciente_nombre,
-      "Teléfono": c.paciente_telefono || "—", "Motivo": c.motivo || "—", "Estado": c.estado || "pendiente"
-    }));
-    const ws = XLSX.utils.json_to_sheet(datos);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Citas");
-    XLSX.writeFile(wb, `citas-imed-${new Date().toISOString().slice(0,10)}.xlsx`);
+  async function getUbicacion() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      setPerfil(p => ({ ...p, latitud: lat, longitud: lng }));
+      toast({ title: "📍 Ubicación capturada", description: `${lat.toFixed(4)}, ${lng.toFixed(4)}` });
+    });
   }
 
-  function toggleDia(dia: string) {
-    setPerfil(prev => ({
-      ...prev,
-      dias_atencion: prev.dias_atencion.includes(dia)
-        ? prev.dias_atencion.filter(d => d !== dia)
-        : [...prev.dias_atencion, dia]
-    }));
-  }
+  const today = new Date().toISOString().split("T")[0];
+  const citasHoy = citas.filter(c => c.fecha === today);
+  const citasPendientes = citas.filter(c => c.estado === "pendiente");
+  const citasCompletadas = citas.filter(c => c.estado === "completada");
+  const citasEsteMes = citas.filter(c => c.fecha?.startsWith(new Date().toISOString().slice(0, 7)));
+  const ingresosMes = citasEsteMes.filter(c => c.estado === "completada").length * (parseFloat(perfil.precio_consulta) || 0);
+  const avgRating = opiniones.length > 0 ? (opiniones.reduce((s, o) => s + (o.rating || 0), 0) / opiniones.length).toFixed(1) : "—";
+  const pacientesUnicos = new Set(citas.map(c => c.paciente_id)).size;
+  const citasFiltradas = citas.filter(c => {
+    if (citaFilter === "hoy") return c.fecha === today;
+    if (citaFilter === "todas") return true;
+    return c.estado === citaFilter;
+  });
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">Cargando...</p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-gray-600">Cargando tu dashboard...</p>
+      </div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-blue-900 text-white p-4">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">Panel Doctor — iMed Guatemala</h1>
-          <button
-            onClick={() => supabase.auth.signOut().then(() => navigate("/"))}
-            className="bg-white text-blue-900 font-semibold px-4 py-2 rounded-lg text-sm hover:bg-blue-50 transition">
-            Cerrar sesión
-          </button>
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+              <Stethoscope className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-sm">{fullName || "Doctor"}</p>
+              <p className="text-xs text-gray-500">{perfil.especialidad || "Completa tu perfil"}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate("/")}>Ver App</Button>
+            <Button variant="outline" size="sm" className="text-xs text-red-600 border-red-200 hover:bg-red-50"
+              onClick={async () => { await supabase.auth.signOut(); navigate("/auth"); }}>
+              <LogOut className="w-3 h-3 mr-1" /> Salir
+            </Button>
+          </div>
+        </div>
+        <div className="max-w-6xl mx-auto px-4 flex gap-1">
+          {["inicio","citas","opiniones","perfil"].map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-800"}`}>
+              {tab === "inicio" ? "Inicio" : tab === "citas" ? `Citas (${citas.length})` : tab === "opiniones" ? `Reseñas (${opiniones.length})` : "Mi Perfil"}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button onClick={() => setActiveTab("perfil")}
-            className={`px-5 py-2 rounded-lg font-semibold text-sm transition ${activeTab === "perfil" ? "bg-blue-900 text-white" : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400"}`}>
-            Mi Perfil
-          </button>
-          <button onClick={() => setActiveTab("citas")}
-            className={`px-5 py-2 rounded-lg font-semibold text-sm transition ${activeTab === "citas" ? "bg-blue-900 text-white" : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400"}`}>
-            Mis Citas ({citas.length})
-          </button>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 py-6">
 
-        {activeTab === "perfil" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-blue-900">Completa tu perfil médico</CardTitle>
-              <p className="text-sm text-gray-500">Esta información aparecerá cuando los pacientes te busquen</p>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-700 font-semibold">Especialidad *</Label>
-                  <select className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:outline-none focus:border-blue-700"
-                    value={perfil.especialidad}
-                    onChange={e => setPerfil({...perfil, especialidad: e.target.value})}>
-                    <option value="">Selecciona una especialidad</option>
-                    {ESPECIALIDADES.map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <Label className="text-gray-700 font-semibold">Número de Colegiado</Label>
-                  <Input value={perfil.numero_colegiado} onChange={e => setPerfil({...perfil, numero_colegiado: e.target.value})} placeholder="Ej: 12345" />
-                </div>
-                <div>
-                  <Label className="text-gray-700 font-semibold">Clínica / Hospital</Label>
-                  <Input value={perfil.clinica} onChange={e => setPerfil({...perfil, clinica: e.target.value})} placeholder="Ej: Clínica San Rafael" />
-                </div>
-                <div>
-                  <Label className="text-gray-700 font-semibold">Dirección</Label>
-                  <Input value={perfil.direccion} onChange={e => setPerfil({...perfil, direccion: e.target.value})} placeholder="Ej: Zona 10, Guatemala City" />
-                </div>
-                <div>
-                  <Label className="text-gray-700 font-semibold">Teléfono de contacto</Label>
-                  <Input value={perfil.telefono} onChange={e => setPerfil({...perfil, telefono: e.target.value})} placeholder="Ej: +502 5555-5555" />
-                </div>
-                <div>
-                  <Label className="text-gray-700 font-semibold">Precio consulta (Q)</Label>
-                  <Input type="number" value={perfil.precio_consulta} onChange={e => setPerfil({...perfil, precio_consulta: e.target.value})} placeholder="Ej: 350" />
-                </div>
-                <div>
-                  <Label className="text-gray-700 font-semibold">Hora inicio</Label>
-                  <Input type="time" value={perfil.hora_inicio} onChange={e => setPerfil({...perfil, hora_inicio: e.target.value})} />
-                </div>
-                <div>
-                  <Label className="text-gray-700 font-semibold">Hora fin</Label>
-                  <Input type="time" value={perfil.hora_fin} onChange={e => setPerfil({...perfil, hora_fin: e.target.value})} />
-                </div>
-              </div>
+        {activeTab === "inicio" && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { icon: Calendar, bg: "bg-blue-100", ic: "text-blue-600", badge: "Hoy", badgeC: "text-green-600 bg-green-50", val: citasHoy.length, label: "Citas hoy" },
+                { icon: AlertCircle, bg: "bg-yellow-100", ic: "text-yellow-600", badge: "Pendientes", badgeC: "text-yellow-700 bg-yellow-50", val: citasPendientes.length, label: "Por confirmar" },
+                { icon: DollarSign, bg: "bg-green-100", ic: "text-green-600", badge: "Este mes", badgeC: "text-blue-600 bg-blue-50", val: `Q${ingresosMes.toLocaleString()}`, label: "Ingresos estimados" },
+                { icon: Star, bg: "bg-purple-100", ic: "text-purple-600", badge: `${opiniones.length} reseñas`, badgeC: "text-purple-700 bg-purple-50", val: avgRating, label: "Calificación" },
+              ].map(({ icon: Icon, bg, ic, badge, badgeC, val, label }, i) => (
+                <Card key={i} className="border-0 shadow-sm">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center`}>
+                        <Icon className={`w-5 h-5 ${ic}`} />
+                      </div>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeC}`}>{badge}</span>
+                    </div>
+                    <p className="text-3xl font-bold text-gray-900">{val}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{label}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-              <div>
-                <Label className="text-gray-700 font-semibold">Días de atención</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {DIAS.map(dia => (
-                    <button key={dia} onClick={() => toggleDia(dia)}
-                      className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-                        perfil.dias_atencion.includes(dia)
-                          ? "bg-blue-900 text-white border-blue-900"
-                          : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
-                      }`}>
-                      {dia}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Activity className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-bold text-gray-900">Rendimiento del mes</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { label: "Citas completadas", val: citasCompletadas.length, pct: citas.length > 0 ? (citasCompletadas.length/citas.length)*100 : 0, color: "bg-green-500" },
+                      { label: "Citas este mes", val: citasEsteMes.length, pct: Math.min(citasEsteMes.length*5,100), color: "bg-blue-500" },
+                      { label: "Pacientes únicos", val: pacientesUnicos, pct: Math.min(pacientesUnicos*10,100), color: "bg-purple-500" },
+                    ].map(({label,val,pct,color}) => (
+                      <div key={label}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600">{label}</span>
+                          <span className="font-semibold">{val}</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-2">
+                          <div className={`${color} h-2 rounded-full`} style={{width:`${pct}%`}} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div>
-                <Label className="text-gray-700 font-semibold">Descripción / Bio</Label>
-                <Textarea value={perfil.bio} onChange={e => setPerfil({...perfil, bio: e.target.value})}
-                  placeholder="Cuéntale a los pacientes sobre tu experiencia y especialización..." rows={4} />
-              </div>
-
-              {/* Sección ubicación */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-blue-900 font-semibold text-sm mb-1">📍 Ubicación de tu clínica</p>
-                <p className="text-blue-900 text-sm mb-3">
-                  Necesaria para que los pacientes te encuentren cerca de ellos.
-                </p>
-                <button onClick={detectarUbicacion}
-                  className="bg-blue-900 text-white font-semibold px-5 py-2 rounded-lg text-sm hover:bg-blue-950 transition">
-                  Detectar mi ubicación
-                </button>
-                {ubicacionStatus && (
-                  <p className="text-sm mt-3 text-blue-900 font-medium">{ubicacionStatus}</p>
-                )}
-              </div>
-
-              <button onClick={savePerfil} disabled={saving}
-                className="w-full bg-blue-900 text-white font-bold py-3 rounded-xl hover:bg-blue-950 transition disabled:opacity-50 text-base">
-                {saving ? "Guardando..." : "Guardar Perfil"}
-              </button>
-            </CardContent>
-          </Card>
+              <Card className="border-0 shadow-sm lg:col-span-2">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-blue-600" />
+                      <h3 className="font-bold text-gray-900">Citas de Hoy</h3>
+                    </div>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{citasHoy.length} programadas</span>
+                  </div>
+                  {citasHoy.length === 0 ? (
+                    <div className="text-center py-6 text-gray-400">
+                      <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No tienes citas para hoy</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {citasHoy.slice(0,5).map(c => {
+                        const cfg = ESTADO_CONFIG[c.estado] || ESTADO_CONFIG.pendiente;
+                        return (
+                          <div key={c.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-xs font-bold text-blue-700">{(c.paciente_nombre||"P")[0]}</span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">{c.paciente_nombre}</p>
+                                <p className="text-xs text-gray-500">{c.motivo||"Consulta general"}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-gray-700">{c.hora}</span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.color}`}>{cfg.label}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         )}
 
         {activeTab === "citas" && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-800">Tus citas agendadas</h2>
-              {citas.length > 0 && (
-                <button onClick={exportarExcel}
-                  className="border border-blue-900 text-blue-900 font-semibold px-4 py-2 rounded-lg text-sm hover:bg-blue-50 transition">
-                  Exportar a Excel
+            <div className="flex gap-2 flex-wrap">
+              {["todas","hoy","pendiente","confirmada","completada"].map(f => (
+                <button key={f} onClick={() => setCitaFilter(f)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${citaFilter===f ? "bg-blue-600 text-white" : "bg-white text-gray-600 border border-gray-300 hover:border-blue-600"}`}>
+                  {f==="todas"?`Todas (${citas.length})`:f==="hoy"?`Hoy (${citasHoy.length})`:f==="pendiente"?`Pendientes (${citasPendientes.length})`:f==="confirmada"?`Confirmadas (${citas.filter(c=>c.estado==="confirmada").length})`:`Completadas (${citasCompletadas.length})`}
                 </button>
-              )}
+              ))}
             </div>
-            {citas.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center text-gray-400">
-                  No tienes citas agendadas aún.
-                </CardContent>
-              </Card>
+            {citasFiltradas.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>No hay citas en esta categoría</p>
+              </div>
             ) : (
-              citas.map(cita => (
-                <Card key={cita.id}>
-                  <CardContent className="pt-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-semibold text-gray-800">{cita.paciente_nombre}</p>
-                        <p className="text-sm text-gray-500">{cita.fecha} a las {cita.hora}</p>
-                        {cita.motivo && <p className="text-sm text-gray-600 mt-1">Motivo: {cita.motivo}</p>}
-                        {cita.paciente_telefono && <p className="text-sm text-gray-500">Tel: {cita.paciente_telefono}</p>}
+              <div className="space-y-3">
+                {citasFiltradas.map(c => {
+                  const cfg = ESTADO_CONFIG[c.estado] || ESTADO_CONFIG.pendiente;
+                  const Icon = cfg.icon;
+                  return (
+                    <Card key={c.id} className="border-0 shadow-sm">
+                      <CardContent className="p-5">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                              <span className="text-lg font-bold text-blue-700">{(c.paciente_nombre||"P")[0]}</span>
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900">{c.paciente_nombre}</p>
+                              <p className="text-sm text-gray-500 mt-0.5">{c.motivo||"Consulta general"}</p>
+                              <div className="flex items-center gap-3 mt-2">
+                                <span className="flex items-center gap-1 text-xs text-gray-500"><Calendar className="w-3 h-3"/>{c.fecha}</span>
+                                <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3"/>{c.hora}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-semibold ${cfg.color}`}>
+                              <Icon className="w-3 h-3"/>{cfg.label}
+                            </span>
+                            {c.estado==="pendiente" && (
+                              <div className="flex gap-1">
+                                <Button size="sm" className="text-xs bg-green-600 hover:bg-green-700 text-white h-7 px-2" onClick={() => updateCitaEstado(c.id,"confirmada")}>Confirmar</Button>
+                                <Button size="sm" variant="outline" className="text-xs text-red-600 border-red-200 h-7 px-2" onClick={() => updateCitaEstado(c.id,"cancelada")}>Cancelar</Button>
+                              </div>
+                            )}
+                            {c.estado==="confirmada" && (
+                              <Button size="sm" className="text-xs bg-blue-600 hover:bg-blue-700 text-white h-7 px-3" onClick={() => updateCitaEstado(c.id,"completada")}>Marcar completada</Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "opiniones" && (
+          <div className="space-y-4">
+            {opiniones.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <Star className="w-12 h-12 mx-auto mb-3 opacity-30"/>
+                <p className="font-medium">Aún no tienes reseñas</p>
+                <p className="text-sm mt-1">Cuando tus pacientes te califiquen aparecerán aquí</p>
+              </div>
+            ) : (
+              <>
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-5 flex items-center gap-6">
+                    <div className="text-center">
+                      <p className="text-5xl font-bold text-gray-900">{avgRating}</p>
+                      <div className="flex items-center gap-0.5 mt-1 justify-center">
+                        {[1,2,3,4,5].map(s => <Star key={s} className={`w-4 h-4 ${s<=parseFloat(avgRating)?"text-yellow-400 fill-yellow-400":"text-gray-300"}`}/>)}
                       </div>
-                      <div className="flex flex-col gap-2 items-end">
-                        <Badge className={
-                          cita.estado === "confirmada" ? "bg-green-100 text-green-800" :
-                          cita.estado === "cancelada" ? "bg-red-100 text-red-800" :
-                          "bg-yellow-100 text-yellow-800"
-                        }>
-                          {cita.estado || "pendiente"}
-                        </Badge>
-                        {cita.estado !== "confirmada" && (
-                          <button onClick={() => actualizarEstadoCita(cita.id, "confirmada")}
-                            className="bg-blue-900 text-white px-3 py-1 rounded-lg text-xs hover:bg-blue-950 transition">
-                            Confirmar
-                          </button>
-                        )}
-                        {cita.estado !== "cancelada" && (
-                          <button onClick={() => actualizarEstadoCita(cita.id, "cancelada")}
-                            className="border border-red-300 text-red-600 px-3 py-1 rounded-lg text-xs hover:bg-red-50 transition">
-                            Cancelar
-                          </button>
-                        )}
-                      </div>
+                      <p className="text-sm text-gray-500 mt-1">{opiniones.length} reseñas</p>
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      {[5,4,3,2,1].map(n => {
+                        const count = opiniones.filter(o=>o.rating===n).length;
+                        const pct = opiniones.length>0?(count/opiniones.length)*100:0;
+                        return (
+                          <div key={n} className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 w-2">{n}</span>
+                            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400"/>
+                            <div className="flex-1 bg-gray-100 rounded-full h-2">
+                              <div className="bg-yellow-400 h-2 rounded-full" style={{width:`${pct}%`}}/>
+                            </div>
+                            <span className="text-xs text-gray-500 w-4">{count}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
-              ))
+                <div className="space-y-3">
+                  {opiniones.map(o => (
+                    <Card key={o.id} className="border-0 shadow-sm">
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-1 mb-2">
+                          {[1,2,3,4,5].map(s => <Star key={s} className={`w-4 h-4 ${s<=o.rating?"text-yellow-400 fill-yellow-400":"text-gray-300"}`}/>)}
+                          <span className="text-xs text-gray-400 ml-2">{new Date(o.created_at).toLocaleDateString("es-GT")}</span>
+                        </div>
+                        {o.comentario && <p className="text-sm text-gray-700">"{o.comentario}"</p>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
             )}
+          </div>
+        )}
+
+        {activeTab === "perfil" && (
+          <div className="space-y-6">
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Stethoscope className="w-5 h-5 text-blue-600"/>Información Profesional
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-semibold">Especialidad</Label>
+                    <select value={perfil.especialidad} onChange={e=>setPerfil(p=>({...p,especialidad:e.target.value}))}
+                      className="w-full mt-1 h-10 rounded-xl border border-gray-200 px-3 text-sm focus:outline-none focus:border-blue-400">
+                      <option value="">Seleccionar...</option>
+                      {ESPECIALIDADES.map(e=><option key={e} value={e}>{e}</option>)}
+                    </select>
+                  </div>
+                  <div><Label className="text-sm font-semibold">No. Colegiado</Label><Input value={perfil.numero_colegiado} onChange={e=>setPerfil(p=>({...p,numero_colegiado:e.target.value}))} placeholder="12345" className="mt-1 h-10 rounded-xl"/></div>
+                  <div><Label className="text-sm font-semibold">Clínica / Hospital</Label><Input value={perfil.clinica} onChange={e=>setPerfil(p=>({...p,clinica:e.target.value}))} placeholder="Hospital General" className="mt-1 h-10 rounded-xl"/></div>
+                  <div><Label className="text-sm font-semibold">Teléfono</Label><Input value={perfil.telefono} onChange={e=>setPerfil(p=>({...p,telefono:e.target.value}))} placeholder="2222-3333" className="mt-1 h-10 rounded-xl"/></div>
+                  <div><Label className="text-sm font-semibold">Precio consulta (Q)</Label><Input type="number" value={perfil.precio_consulta} onChange={e=>setPerfil(p=>({...p,precio_consulta:e.target.value}))} placeholder="350" className="mt-1 h-10 rounded-xl"/></div>
+                  <div><Label className="text-sm font-semibold">Dirección</Label><Input value={perfil.direccion} onChange={e=>setPerfil(p=>({...p,direccion:e.target.value}))} placeholder="Zona 10, Guatemala" className="mt-1 h-10 rounded-xl"/></div>
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold">Biografía / Presentación</Label>
+                  <Textarea value={perfil.bio} onChange={e=>setPerfil(p=>({...p,bio:e.target.value}))} placeholder="Cuéntale a tus pacientes sobre ti..." className="mt-1 rounded-xl" rows={3}/>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-bold flex items-center gap-2"><Clock className="w-5 h-5 text-blue-600"/>Horario de Atención</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Días de atención</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {DIAS.map(dia => (
+                      <button key={dia} type="button"
+                        onClick={() => setPerfil(p=>({...p,dias_atencion:p.dias_atencion.includes(dia)?p.dias_atencion.filter(d=>d!==dia):[...p.dias_atencion,dia]}))}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${perfil.dias_atencion.includes(dia)?"bg-blue-600 text-white":"bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                        {dia}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label className="text-sm font-semibold">Hora inicio</Label><Input type="time" value={perfil.hora_inicio} onChange={e=>setPerfil(p=>({...p,hora_inicio:e.target.value}))} className="mt-1 h-10 rounded-xl"/></div>
+                  <div><Label className="text-sm font-semibold">Hora fin</Label><Input type="time" value={perfil.hora_fin} onChange={e=>setPerfil(p=>({...p,hora_fin:e.target.value}))} className="mt-1 h-10 rounded-xl"/></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-bold flex items-center gap-2"><MapPin className="w-5 h-5 text-blue-600"/>Ubicación GPS</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {perfil.latitud && perfil.longitud ? (
+                  <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-4 py-3 rounded-xl">
+                    <CheckCircle className="w-4 h-4"/>Ubicación guardada: {perfil.latitud.toFixed(4)}, {perfil.longitud.toFixed(4)}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-50 px-4 py-3 rounded-xl">
+                    <AlertCircle className="w-4 h-4"/>Sin ubicación — aparecerás en el mapa cuando la captures
+                  </div>
+                )}
+                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50 rounded-xl" onClick={getUbicacion}>
+                  <MapPin className="w-4 h-4 mr-2"/>Capturar mi ubicación actual
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Button onClick={savePerfil} disabled={saving} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md text-base">
+              {saving ? "Guardando..." : "Guardar Perfil"}
+            </Button>
           </div>
         )}
       </div>

@@ -205,7 +205,7 @@ const MedicineDetail = () => {
                             <Phone className="mr-2 h-4 w-4" />
                             {pharmacy.stockQuantity > 0 ? 'Reservar' : 'Sin stock'}
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent((pharmacy.name || '') + ' ' + (pharmacy.address || '') + ' Guatemala')}`, '_blank')}>
                             <MapPin className="h-4 w-4" />
                           </Button>
                         </div>

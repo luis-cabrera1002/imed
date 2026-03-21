@@ -35,7 +35,8 @@ export default function Appointments() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { navigate("/auth"); return; }
     setUser(user);
-    if (doctorId) await loadDoctor(doctorId);
+    if (!doctorId) { navigate("/doctores"); return; }
+    await loadDoctor(doctorId);
     setLoading(false);
   }
 

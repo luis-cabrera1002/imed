@@ -22,6 +22,7 @@ import MyInsurance from "./pages/MyInsurance";
 import SeniorGuide from "./pages/SeniorGuide";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import BamDoctorProfile from '@/pages/BamDoctorProfile';
+import AgendaInteligente from '@/pages/AgendaInteligente';
 import BamDoctors from '@/pages/BamDoctors';
 import DoctorMap from "./pages/DoctorMap";
 import PharmacyDashboard from "./pages/PharmacyDashboard";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/doctores/:id" element={<DoctorDetail />} />
               <Route path="/medicos-bam" element={<BamDoctors />} />
               <Route path="/medicos-bam/:id" element={<BamDoctorProfile />} />
+              <Route path="/agenda-inteligente" element={<AgendaInteligente />} />
               <Route path="/mapa-doctores" element={<DoctorMap />} />
               <Route path="/especialidades" element={<Specialties />} />
               <Route path="/citas" element={<Appointments />} />

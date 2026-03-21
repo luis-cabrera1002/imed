@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
-  User, Calendar, DollarSign, Star, Clock, CheckCircle, XCircle,
+  User, Calendar, DollarSign, Star, Clock, CheckCircle, XCircle, Brain,
   AlertCircle, TrendingUp, Users, Stethoscope, MapPin, Phone,
   Edit, Save, LogOut, ChevronRight, Activity
 } from "lucide-react";
@@ -163,6 +163,9 @@ export default function DoctorDashboard() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate("/")}>Ver App</Button>
+            <Button size="sm" className="text-xs bg-purple-600 hover:bg-purple-700 text-white gap-1" onClick={() => navigate("/agenda-inteligente")}>
+              <Brain className="w-3 h-3"/> Agenda IA
+            </Button>
             <Button variant="outline" size="sm" className="text-xs text-red-600 border-red-200 hover:bg-red-50"
               onClick={async () => { await supabase.auth.signOut(); navigate("/auth"); }}>
               <LogOut className="w-3 h-3 mr-1" /> Salir

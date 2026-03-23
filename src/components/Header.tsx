@@ -163,6 +163,24 @@ const Header = () => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
+                  {/* Mi Dashboard — solo para pacientes */}
+                  {role === 'patient' && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/patient-dashboard" className="flex items-center gap-2 cursor-pointer font-medium text-primary">
+                        <LayoutDashboard className="h-4 w-4" />
+                        Mi Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {/* Dashboard Doctor */}
+                  {role === 'doctor' && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/doctor-dashboard" className="flex items-center gap-2 cursor-pointer font-medium text-primary">
+                        <LayoutDashboard className="h-4 w-4" />
+                        Mi Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link to="/mis-citas" className="flex items-center gap-2 cursor-pointer">
                       <Calendar className="h-4 w-4" />
@@ -237,6 +255,28 @@ const Header = () => {
                 </div>
 
                 <div className="h-px bg-border/50 my-2" />
+
+                {/* Dashboard link en mobile */}
+                {user && role === 'patient' && (
+                  <Link
+                    to="/patient-dashboard"
+                    className="flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-xl bg-primary/5 text-primary hover:bg-primary/10 transition-all"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <LayoutDashboard className="h-5 w-5" />
+                    Mi Dashboard
+                  </Link>
+                )}
+                {user && role === 'doctor' && (
+                  <Link
+                    to="/doctor-dashboard"
+                    className="flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-xl bg-primary/5 text-primary hover:bg-primary/10 transition-all"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <LayoutDashboard className="h-5 w-5" />
+                    Mi Dashboard
+                  </Link>
+                )}
 
                 {navItems.map((item) => (
                   <Link

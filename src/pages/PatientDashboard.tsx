@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
-  Search, User, Activity, LogOut, Star, Shield,
+  Search, User, Activity, LogOut, Star, Shield, Bell,
   ChevronRight, Eye, TrendingUp, Heart
 } from "lucide-react";
 
@@ -29,6 +30,7 @@ export default function PatientDashboard() {
   const [citas, setCitas]     = useState<any[]>([]);
   const [recetas, setRecetas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { supported, isSubscribed, permission, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
 
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
@@ -109,7 +111,19 @@ export default function PatientDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2 text-sm rounded-lg" onClick={() => navigate("/")}>
+            {supported && (
+            <Button
+              variant={isSubscribed ? "default" : "outline"}
+              size="sm"
+              className={`gap-2 text-sm rounded-lg ${isSubscribed ? "bg-primary text-white" : ""}`}
+              onClick={isSubscribed ? unsubscribe : subscribe}
+              disabled={pushLoading}
+            >
+              <Bell className="w-4 h-4" />
+              <span className="hidden sm:inline">{isSubscribed ? "Notif. ON" : "Activar Notif."}</span>
+            </Button>
+          )}
+          <Button variant="outline" size="sm" className="gap-2 text-sm rounded-lg" onClick={() => navigate("/")}>
               <Eye className="w-4 h-4" />
               <span className="hidden sm:inline">Ver App</span>
             </Button>

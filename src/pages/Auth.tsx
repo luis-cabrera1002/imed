@@ -31,7 +31,7 @@ const Auth = () => {
     setLoading(false);
   };
 
-  const handleRegister = async (e: React.FormEvent, role: "paciente" | "doctor") => {
+  const handleRegister = async (e: React.FormEvent, role: "patient" | "doctor") => {
     e.preventDefault(); setLoading(true); setError("");
     const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, phone, role } } });
     if (error) {
@@ -152,7 +152,7 @@ const Auth = () => {
                     <Button onClick={() => navigate("/")} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-xl">Ir al inicio</Button>
                   </div>
                 ) : (
-                  <form onSubmit={(e) => handleRegister(e, "paciente")} className="space-y-5">
+                  <form onSubmit={(e) => handleRegister(e, "patient")} className="space-y-5">
                     <div><label className="block text-sm font-semibold text-gray-700 mb-2">Nombre completo</label><Input type="text" placeholder="Tu nombre completo" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="h-12 rounded-xl border-gray-200 focus:border-blue-400 text-base" /></div>
                     <div><label className="block text-sm font-semibold text-gray-700 mb-2">Teléfono (opcional)</label><Input type="tel" placeholder="5555-1234" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12 rounded-xl border-gray-200 focus:border-blue-400 text-base" /></div>
                     <div><label className="block text-sm font-semibold text-gray-700 mb-2">Correo electrónico</label><Input type="email" placeholder="tucorreo@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-12 rounded-xl border-gray-200 focus:border-blue-400 text-base" /></div>

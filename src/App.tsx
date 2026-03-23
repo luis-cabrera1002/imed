@@ -26,6 +26,7 @@ import AgendaInteligente from '@/pages/AgendaInteligente';
 import BamDoctors from '@/pages/BamDoctors';
 import DoctorMap from "./pages/DoctorMap";
 import PharmacyDashboard from "./pages/PharmacyDashboard";
+import PatientDashboard from "./pages/PatientDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
               <Route path="/guia-adultos" element={<SeniorGuide />} />
               <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
               <Route path="/pharmacy-dashboard" element={<PharmacyDashboard />} />
+              <Route path="/patient-dashboard" element={<PatientDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ViewProvider>

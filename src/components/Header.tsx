@@ -164,7 +164,7 @@ const Header = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   {/* Mi Dashboard — solo para pacientes */}
-                  {role === 'patient' && (
+                  {(role === 'patient' || role === 'paciente') && (
                     <DropdownMenuItem asChild>
                       <Link to="/patient-dashboard" className="flex items-center gap-2 cursor-pointer font-medium text-primary">
                         <LayoutDashboard className="h-4 w-4" />
@@ -257,7 +257,7 @@ const Header = () => {
                 <div className="h-px bg-border/50 my-2" />
 
                 {/* Dashboard link en mobile */}
-                {user && role === 'patient' && (
+                {user && (role === 'patient' || role === 'paciente') && (
                   <Link
                     to="/patient-dashboard"
                     className="flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-xl bg-primary/5 text-primary hover:bg-primary/10 transition-all"

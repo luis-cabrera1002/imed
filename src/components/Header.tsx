@@ -41,6 +41,7 @@ const Header = () => {
   ];
 
   const doctorNavItems = [
+    { to: "/doctor-dashboard", label: "Mi Dashboard", icon: LayoutDashboard },
 
     { to: "/clinicas", label: "Clínicas", icon: Building2 },
     { to: "/doctores", label: "Colegas", icon: Stethoscope },
@@ -267,67 +268,3 @@ const Header = () => {
                     Mi Dashboard
                   </Link>
                 )}
-                {user && role === 'doctor' && (
-                  <Link
-                    to="/doctor-dashboard"
-                    className="flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-xl bg-primary/5 text-primary hover:bg-primary/10 transition-all"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <LayoutDashboard className="h-5 w-5" />
-                    Mi Dashboard
-                  </Link>
-                )}
-
-                {navItems.map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    className="flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-xl hover:bg-primary/5 transition-all"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <item.icon className="h-5 w-5 text-primary" />
-                    {item.label}
-                  </Link>
-                ))}
-                
-                {viewMode === 'patient' && (
-                  <>
-                    <div className="h-px bg-border/50 my-2" />
-                    <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Servicios
-                    </p>
-                    
-                    {servicesItems.map((item) => (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        className="flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-xl hover:bg-primary/5 transition-all"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <item.icon className="h-5 w-5 text-secondary" />
-                        {item.label}
-                      </Link>
-                    ))}
-                    
-                    <div className="h-px bg-border/50 my-2" />
-                    
-                    <Link
-                      to="/guia-adultos"
-                      className="flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-xl bg-secondary/10 text-secondary hover:bg-secondary/15 transition-all"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Heart className="h-5 w-5" />
-                      Guía para Adultos Mayores
-                    </Link>
-                  </>
-                )}
-              </nav>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </div>
-    </header>
-  );
-};
-
-export default Header;

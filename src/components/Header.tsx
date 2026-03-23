@@ -41,7 +41,7 @@ const Header = () => {
   ];
 
   const doctorNavItems = [
-    { to: "/doctor-dashboard", label: "Mi Dashboard", icon: LayoutDashboard },
+
     { to: "/clinicas", label: "Clínicas", icon: Building2 },
     { to: "/doctores", label: "Colegas", icon: Stethoscope },
   ];

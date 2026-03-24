@@ -63,8 +63,8 @@ const Header = () => {
     { to: "/mis-citas", label: "Mis Citas", icon: Clock },
     { to: "/medicinas", label: "Medicinas", icon: Pill },
     { to: "/mis-recetas", label: "Mis Recetas", icon: FileText },
-    { to: "/mi-seguro", label: "Mi Seguro", icon: Shield },
     { to: "/escaner-medicamentos", label: "Escáner Med.", icon: Scan },
+    { to: "/mi-seguro", label: "Mi Seguro", icon: Shield },
   ];
   
   return (

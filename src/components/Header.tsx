@@ -267,7 +267,6 @@ const Header = () => {
                   </div>
                 </div>
 
-                )}
 
                 {navItems.map((item) => (
                   <Link

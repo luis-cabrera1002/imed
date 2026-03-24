@@ -562,7 +562,7 @@ export default function PatientDashboard() {
                         s.medicamento === "Butosol" ? "bg-red-100" :
                         s.medicamento === "Salbutamol" ? "bg-blue-100" : "bg-gray-100"
                       }`}>
-                        {s.medicamento === "Butosol" ? "🔴" : s.medicamento === "Salbutamol" ? "��" : "💊"}
+                        {s.medicamento === "Butosol" ? "🔴" : s.medicamento === "Salbutamol" ? "🔵" : "💊"}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-foreground">{s.medicamento}</p>

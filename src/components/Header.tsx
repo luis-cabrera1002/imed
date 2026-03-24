@@ -267,18 +267,6 @@ const Header = () => {
                   </div>
                 </div>
 
-                <div className="h-px bg-border/50 my-2" />
-
-                {/* Dashboard link en mobile */}
-                {user && role === 'patient' && (
-                  <Link
-                    to="/patient-dashboard"
-                    className="flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-xl bg-primary/5 text-primary hover:bg-primary/10 transition-all"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <LayoutDashboard className="h-5 w-5" />
-                    Mi Dashboard
-                  </Link>
                 )}
 
                 {navItems.map((item) => (

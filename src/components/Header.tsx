@@ -32,6 +32,8 @@ const Header = () => {
   const { user, role, signOut } = useAuth();
   const { viewMode } = useView();
   const navigate = useNavigate();
+  const ADMIN_EMAILS = ["totessi.10@gmail.com", "luisan.cabrera@gmail.com"];
+  const isAdmin = user ? ADMIN_EMAILS.includes(user.email || "") : false;
 
   const patientNavItems = [
     { to: "/", label: "Inicio", icon: Home },
@@ -125,7 +127,7 @@ const Header = () => {
         {/* Right Side Actions */}
         <div className="flex items-center gap-2">
           <div className="hidden md:block">
-            <ViewSwitcher />
+            {isAdmin && <ViewSwitcher />}
           </div>
 
           <Button 
@@ -180,6 +182,15 @@ const Header = () => {
                       <Link to="/doctor-dashboard" className="flex items-center gap-2 cursor-pointer font-medium text-primary">
                         <LayoutDashboard className="h-4 w-4" />
                         Mi Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {/* Dashboard Farmacia */}
+                  {viewMode === 'pharmacy' && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/pharmacy-dashboard" className="flex items-center gap-2 cursor-pointer font-medium text-primary">
+                        <LayoutDashboard className="h-4 w-4" />
+                        Mi Dashboard Farmacia
                       </Link>
                     </DropdownMenuItem>
                   )}
@@ -252,7 +263,7 @@ const Header = () => {
                     Cambiar Vista
                   </p>
                   <div className="px-3">
-                    <ViewSwitcher />
+                    {isAdmin && <ViewSwitcher />}
                   </div>
                 </div>
 

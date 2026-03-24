@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
       });
     }
     // Forzar siempre image/jpeg si mimeType es vacío o inválido
-    const validMime = ["image/jpeg", "image/png", "image/webp"].includes(mimeType) ? mimeType : "image/jpeg";
+    const validMime = "image/jpeg"; // Forzar siempre JPEG — Groq no acepta HEIC
     // Limpiar base64 por si trae prefijo data:...
     const cleanImage = image.includes(",") ? image.split(",")[1] : image;
 
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
           content: [
             {
               type: "image_url",
-              image_url: { url: `data:${validMime};base64,${cleanImage}` }
+              image_url: { url: `data:image/jpeg;base64,${cleanImage}` }
             },
             {
               type: "text",

@@ -117,28 +117,8 @@ export default function MedicineScanner() {
       });
 
       setImagePreview(dataUrl);
-      // Convertir a JPEG via canvas con timeout de seguridad
-      const convertToJpeg = (src: string): Promise<string> =>
-        new Promise((res) => {
-          const img = new Image();
-          const timeout = setTimeout(() => res(src), 5000);
-          img.onload = () => {
-            clearTimeout(timeout);
-            try {
-              const MAX = 1024;
-              const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
-              const canvas = document.createElement("canvas");
-              canvas.width = Math.round(img.naturalWidth * scale);
-              canvas.height = Math.round(img.naturalHeight * scale);
-              canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-              res(canvas.toDataURL("image/jpeg", 0.8));
-            } catch { res(src); }
-          };
-          img.onerror = () => { clearTimeout(timeout); res(src); };
-          img.src = src;
-        });
-      const jpegDataUrl = await convertToJpeg(dataUrl);
-      const base64 = jpegDataUrl.split(",")[1].replace(/\s/g, "");
+      // Enviar base64 directo — el Edge Function maneja el formato
+      const base64 = dataUrl.split(",")[1].replace(/\s/g, "");
       const mimeType = "image/jpeg" as "image/jpeg";
       const result = await analyzeWithClaude(base64, mimeType);
 

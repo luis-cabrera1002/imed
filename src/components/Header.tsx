@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
-  Search, Menu, User, LogOut, ChevronDown, 
+  Search, Menu, User, LogOut, ChevronDown, Scan, 
   Building2, Stethoscope, Calendar, Pill, FileText, 
   Heart, Home, Clock, LayoutDashboard, Store, Shield
 } from "lucide-react";
@@ -64,6 +64,7 @@ const Header = () => {
     { to: "/medicinas", label: "Medicinas", icon: Pill },
     { to: "/mis-recetas", label: "Mis Recetas", icon: FileText },
     { to: "/mi-seguro", label: "Mi Seguro", icon: Shield },
+    { to: "/escaner-medicamentos", label: "Escáner Med.", icon: Scan },
   ];
   
   return (

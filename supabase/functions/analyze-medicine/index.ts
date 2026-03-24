@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
+const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY")!;
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -18,35 +18,46 @@ Deno.serve(async (req) => {
     }
     const validMime = ["image/jpeg", "image/png", "image/webp"].includes(mimeType) ? mimeType : "image/jpeg";
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inline_data: { mime_type: validMime, data: image } },
-              { text: "Look at this image carefully. Is there an inhaler or aerosol device? If yes: if it is RED or ORANGE or says Butosol, respond ONLY with this exact JSON: {\"nombre\": \"Butosol\", \"confianza\": 90}. If it is BLUE or says Salbutamol or Ventolin, respond ONLY with: {\"nombre\": \"Salbutamol\", \"confianza\": 90}. If you cannot identify it as one of those two, respond ONLY with: {\"nombre\": \"Desconocido\", \"confianza\": 0}. No markdown, no explanation, ONLY the JSON object." }
-            ]
-          }],
-          generationConfig: { maxOutputTokens: 50, temperature: 0.0 }
-        })
-      }
-    );
+    const prompt = "Look at this image. Is there a medical inhaler? If RED or ORANGE or says Butosol: respond ONLY with this JSON: {nombre:Butosol,confianza:90}. If BLUE or says Salbutamol or Ventolin: respond ONLY with: {nombre:Salbutamol,confianza:90}. Otherwise: {nombre:Desconocido,confianza:0}. JSON only, no other text.";
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "meta-llama/llama-4-scout-17b-16e-instruct",
+        max_tokens: 50,
+        temperature: 0.0,
+        messages: [{
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: `data:${validMime};base64,${image}` }
+            },
+            {
+              type: "text",
+              text: prompt
+            }
+          ]
+        }]
+      })
+    });
 
     const data = await response.json();
-    console.log("Gemini raw:", JSON.stringify(data));
+    console.log("Groq raw:", JSON.stringify(data));
 
     if (data.error) {
-      console.error("Gemini error:", JSON.stringify(data.error));
+      console.error("Groq error:", JSON.stringify(data.error));
       return new Response(JSON.stringify({ nombre: "Desconocido", confianza: 0 }), {
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       });
     }
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{"nombre":"Desconocido","confianza":0}';
-    console.log("Gemini text:", text);
+    const text = data.choices?.[0]?.message?.content || '{"nombre":"Desconocido","confianza":0}';
+    console.log("Groq text:", text);
     const clean = text.replace(/```json|```/g, "").trim();
 
     let result;

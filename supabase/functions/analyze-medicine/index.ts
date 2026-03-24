@@ -16,7 +16,10 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       });
     }
+    // Forzar siempre image/jpeg si mimeType es vacío o inválido
     const validMime = ["image/jpeg", "image/png", "image/webp"].includes(mimeType) ? mimeType : "image/jpeg";
+    // Limpiar base64 por si trae prefijo data:...
+    const cleanImage = image.includes(",") ? image.split(",")[1] : image;
 
     const prompt = "Look at this image. Is there a medical inhaler? If RED or ORANGE or says Butosol: respond ONLY with this JSON: {nombre:Butosol,confianza:90}. If BLUE or says Salbutamol or Ventolin: respond ONLY with: {nombre:Salbutamol,confianza:90}. Otherwise: {nombre:Desconocido,confianza:0}. JSON only, no other text.";
 
@@ -35,7 +38,7 @@ Deno.serve(async (req) => {
           content: [
             {
               type: "image_url",
-              image_url: { url: `data:${validMime};base64,${image}` }
+              image_url: { url: `data:${validMime};base64,${cleanImage}` }
             },
             {
               type: "text",

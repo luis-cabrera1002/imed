@@ -38,6 +38,7 @@ const Header = () => {
     { to: "/clinicas", label: "Clínicas", icon: Building2 },
     { to: "/doctores", label: "Médicos", icon: Stethoscope },
     { to: "/especialidades", label: "Especialidades", icon: Heart },
+    { to: "/escaner-medicamentos", label: "Escáner", icon: Scan },
   ];
 
   const doctorNavItems = [

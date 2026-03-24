@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { Scan } from "lucide-react";
 import { Search, MapPin, Calendar, Stethoscope, Activity, Heart, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -100,9 +101,25 @@ const Index = () => {
                 <br />
                 <span className="text-cyan-300">de distancia</span>
               </h1>
-              <p className="max-w-2xl mx-auto text-lg text-white/80 mb-10 animate-fade-in font-body">
+              <p className="max-w-2xl mx-auto text-lg text-white/80 mb-6 animate-fade-in font-body">
                 Accede a los mejores médicos y especialistas de Guatemala en un solo lugar. Agenda citas y más.
               </p>
+              {/* Escáner CTA */}
+              <div className="flex justify-center mb-8 animate-fade-in">
+                <button
+                  onClick={() => window.location.href = "/escaner-medicamentos"}
+                  className="group flex items-center gap-3 px-6 py-3 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 hover:border-white/40 rounded-2xl text-white font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                    <Scan className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-bold leading-tight">Escáner de Medicamentos</p>
+                    <p className="text-xs text-white/70 leading-tight">Identificá tu med. con IA al instante</p>
+                  </div>
+                  <span className="ml-2 px-2 py-0.5 bg-orange-400/30 text-orange-200 text-xs font-bold rounded-full">NUEVO</span>
+                </button>
+              </div>
 
               {/* Search Bar con autocompletado */}
               <div className="max-w-3xl mx-auto mb-14 animate-fade-in-up" ref={searchRef}>

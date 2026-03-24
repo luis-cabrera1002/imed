@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
             </div>
             <div class="card-row">
               <span class="card-label">📅 Fecha</span>
-              <span class="card-value" style="text-transform:capitalize;">${fecha || "No especificada"}</span>
+              <span class="card-value">${fecha || "No especificada"}</span>
             </div>
             <div class="card-row">
               <span class="card-label">🕐 Hora</span>
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
             </div>
             <div class="card-row">
               <span class="card-label">📅 Fecha</span>
-              <span class="card-value" style="text-transform:capitalize;">${fecha || "No especificada"}</span>
+              <span class="card-value">${fecha || "No especificada"}</span>
             </div>
             <div class="card-row">
               <span class="card-label">🕐 Hora</span>

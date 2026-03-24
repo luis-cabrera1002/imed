@@ -101,8 +101,7 @@ export default function MedicineScanner() {
     });
 
     const data = await response.json();
-    const text = data.content?.[0]?.text || '{"nombre":"Desconocido","confianza":0}';
-    return JSON.parse(text.trim());
+    return data;
   }
 
   async function processImage(file: File) {

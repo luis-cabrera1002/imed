@@ -114,7 +114,7 @@ export default function MedicineScanner() {
         // @ts-ignore
         if (window.tmImage) { resolve(window.tmImage); return; }
         attempts++;
-        if (attempts > 30) { reject(new Error("Teachable Machine no disponible")); return; }
+        if (attempts > 10) { reject(new Error("Teachable Machine no disponible")); return; }
         setTimeout(check, 500);
       };
       check();

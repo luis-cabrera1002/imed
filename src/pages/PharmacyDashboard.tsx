@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Package, ShoppingCart, TrendingUp, AlertTriangle,
+  Package, ShoppingCart, TrendingUp, AlertTriangle, BarChart2, Activity, Users,
   CheckCircle, Clock, Truck, Search, RefreshCw,
   Pill, Box, MoreVertical, Eye, ArrowUpRight
 } from "lucide-react";
@@ -38,8 +38,32 @@ export default function PharmacyDashboard() {
   const [search, setSearch] = useState("");
   const [inventario, setInventario] = useState(INVENTARIO_DEMO);
   const [selectedPedido, setSelectedPedido] = useState(null);
+  const [scans, setScans] = useState<any[]>([]);
+  const [scansLoading, setScansLoading] = useState(false);
 
-  useEffect(() => { loadPedidos(); }, []);
+  useEffect(() => { loadPedidos(); loadScans(); }, []);
+
+  async function loadScans() {
+    setScansLoading(true);
+    const { data } = await supabase
+      .from("medicine_scans")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (data) setScans(data);
+    setScansLoading(false);
+  }
+
+  // Suscripción realtime a nuevos escaneos
+  useEffect(() => {
+    const channel = supabase
+      .channel("medicine_scans_changes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "medicine_scans" },
+        (payload) => { setScans(prev => [payload.new, ...prev].slice(0, 100)); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   async function loadPedidos() {
     setLoading(true);
@@ -78,6 +102,23 @@ export default function PharmacyDashboard() {
   const preparando = pedidos.filter(p => p.estado === "preparando");
   const listos = pedidos.filter(p => p.estado === "listo");
   const stockBajo = inventario.filter(i => i.stock < i.max * 0.1);
+
+  // Analytics de demanda
+  const demandaAgrupada = scans.reduce((acc: any, s: any) => {
+    acc[s.medicamento] = (acc[s.medicamento] || 0) + 1;
+    return acc;
+  }, {});
+  const demandaOrdenada = Object.entries(demandaAgrupada)
+    .map(([nombre, total]) => ({ nombre, total }))
+    .sort((a: any, b: any) => b.total - a.total);
+
+  const hoy = scans.filter(s => new Date(s.created_at).toDateString() === new Date().toDateString()).length;
+  const estaSemana = scans.filter(s => {
+    const d = new Date(s.created_at);
+    const ahora = new Date();
+    const diff = (ahora.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
+    return diff <= 7;
+  }).length;
   const sinStock = inventario.filter(i => i.stock === 0);
   const ventasHoy = pedidos.filter(p => p.created_at?.startsWith(new Date().toISOString().slice(0,10))).length;
   const ventasSemana = pedidos.filter(p => {
@@ -131,7 +172,7 @@ export default function PharmacyDashboard() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-4 border-b border-gray-200">
-          {[["pedidos","Pedidos de Recetas"],["inventario","Inventario"],["estadisticas","Estadísticas"]].map(([key,label]) => (
+          {[["pedidos","Pedidos de Recetas"],["inventario","Inventario"],["demanda","🔥 Demanda Real"],["estadisticas","Estadísticas"]].map(([key,label]) => (
             <button key={key} onClick={() => setTab(key)}
               className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab===key ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-800"}`}>
               {label}
@@ -345,6 +386,101 @@ export default function PharmacyDashboard() {
         )}
 
         {/* ESTADÍSTICAS */}
+        {tab === "demanda" && (
+          <div className="space-y-4">
+            {/* KPIs */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 text-white">
+                <p className="text-xs font-semibold text-blue-100 mb-1">Escaneos Hoy</p>
+                <p className="text-3xl font-bold">{hoy}</p>
+                <p className="text-xs text-blue-200 mt-1">búsquedas activas</p>
+              </div>
+              <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl p-4 text-white">
+                <p className="text-xs font-semibold text-orange-100 mb-1">Esta Semana</p>
+                <p className="text-3xl font-bold">{estaSemana}</p>
+                <p className="text-xs text-orange-200 mt-1">medicamentos buscados</p>
+              </div>
+              <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-4 text-white">
+                <p className="text-xs font-semibold text-green-100 mb-1">Total Escaneos</p>
+                <p className="text-3xl font-bold">{scans.length}</p>
+                <p className="text-xs text-green-200 mt-1">desde el inicio</p>
+              </div>
+            </div>
+
+            {/* Ranking de medicamentos más buscados */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-orange-500" />
+                    Medicamentos Más Buscados
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Actualización en tiempo real</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-xs text-green-600 font-semibold">EN VIVO</span>
+                </div>
+              </div>
+              <div className="p-4 space-y-3">
+                {scansLoading ? (
+                  <div className="text-center py-8 text-gray-400">Cargando datos...</div>
+                ) : demandaOrdenada.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400 text-sm">Aún no hay escaneos registrados</p>
+                    <p className="text-gray-300 text-xs mt-1">Los datos aparecerán cuando los pacientes usen el escáner</p>
+                  </div>
+                ) : demandaOrdenada.map((item: any, i: number) => {
+                  const max = demandaOrdenada[0]?.total || 1;
+                  const pct = Math.round((item.total / max) * 100);
+                  const colors = ["from-orange-500 to-red-500", "from-blue-500 to-indigo-500", "from-green-500 to-emerald-500"];
+                  const color = colors[i % colors.length];
+                  return (
+                    <div key={item.nombre} className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+                        #{i+1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm font-semibold text-gray-900">{item.nombre}</p>
+                          <span className="text-sm font-bold text-gray-700">{item.total} búsquedas</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-500`}
+                            style={{width: `${pct}%`}} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Feed de escaneos recientes */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100">
+                <h3 className="font-bold text-gray-900">Escaneos Recientes</h3>
+              </div>
+              <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+                {scans.slice(0, 20).map((s: any) => (
+                  <div key={s.id} className="px-5 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${s.medicamento === "Butosol" ? "bg-red-100" : s.medicamento === "Salbutamol" ? "bg-blue-100" : "bg-gray-100"}`}>
+                        {s.medicamento === "Butosol" ? "🔴" : s.medicamento === "Salbutamol" ? "🔵" : "💊"}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{s.medicamento}</p>
+                        <p className="text-xs text-gray-400">{s.confianza}% confianza · {s.pais}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400">{new Date(s.created_at).toLocaleTimeString("es-GT", {hour:"2-digit",minute:"2-digit"})}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {tab === "estadisticas" && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

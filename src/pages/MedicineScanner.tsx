@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Camera, Upload, Scan, CheckCircle, XCircle,
   MapPin, AlertCircle, RefreshCw, Info,
@@ -118,6 +119,13 @@ export default function MedicineScanner() {
       }
       setResultado({ clase: result.nombre, confianza: result.confianza });
       setMode("resultado");
+      // Guardar escaneo en Supabase para analytics de farmacia
+      supabase.from("medicine_scans").insert({
+        user_id: user?.id || null,
+        medicamento: result.nombre,
+        confianza: result.confianza,
+        pais: "Guatemala"
+      }).then(() => {});
     } catch (err) {
       console.error(err);
       setErrorMsg("Error al analizar. Revisá tu conexión.");
@@ -177,6 +185,13 @@ export default function MedicineScanner() {
 
       setResultado({ clase: result.nombre, confianza: result.confianza });
       setMode("resultado");
+      // Guardar escaneo en Supabase para analytics de farmacia
+      supabase.from("medicine_scans").insert({
+        user_id: user?.id || null,
+        medicamento: result.nombre,
+        confianza: result.confianza,
+        pais: "Guatemala"
+      }).then(() => {});
     } catch (err) {
       console.error(err);
       setErrorMsg("Error al analizar la imagen. Revisá tu conexión e intentá de nuevo.");

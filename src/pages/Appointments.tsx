@@ -95,12 +95,12 @@ export default function Appointments() {
 
         await supabase.functions.invoke("enviar-email-cita", {
           body: {
-            doctor_email: user.email, // fallback
-            doctor_name: doctor?.full_name || doctorPerfil?.full_name || "Doctor",
+            doctor_email: user.email,
+            doctor_name: doctor?.full_name || "Doctor",
             paciente_email: authUser?.email || user.email,
-            paciente_name: authUser?.user_metadata?.full_name || "Paciente",
+            paciente_name: authUser?.user_metadata?.full_name || authUser?.email?.split("@")[0] || "Paciente",
             fecha: fechaFmt,
-            hora,
+            hora: hora?.substring(0, 5) || hora,
             motivo: motivo || "Consulta general",
           }
         });

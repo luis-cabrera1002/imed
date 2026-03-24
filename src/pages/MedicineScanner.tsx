@@ -128,7 +128,7 @@ export default function MedicineScanner() {
       const mimeType = file.type as "image/jpeg" | "image/png" | "image/webp";
       const result = await analyzeWithClaude(base64, mimeType);
 
-      if (result.nombre === "Desconocido" || result.confianza < 30) {
+      if (result.nombre === "Desconocido" || result.confianza < 10) {
         setErrorMsg("No pudimos identificar el medicamento. Intentá con mejor iluminación y enfocando bien la etiqueta.");
         setMode("error");
         return;

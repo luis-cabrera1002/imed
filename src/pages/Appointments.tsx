@@ -82,30 +82,21 @@ export default function Appointments() {
       if (data?.id) setCitaId(data.id);
       setStep(5);
 
-      // Obtener datos del doctor y paciente para el email
+      // Enviar email con datos ya cargados
       try {
-        const { data: doctorProfile } = await supabase
-          .from("profiles")
-          .select("full_name, email")
-          .eq("user_id", doctorId)
-          .single();
-
-        const { data: pacienteProfile } = await supabase
-          .from("profiles")
-          .select("full_name, email")
-          .eq("user_id", user.id)
-          .single();
-
-        const fechaFmt = fecha ? new Date(fecha).toLocaleDateString("es-GT", {
+        const fechaFmt = fecha ? new Date(fecha + "T12:00:00").toLocaleDateString("es-GT", {
           weekday: "long", day: "numeric", month: "long", year: "numeric"
         }) : "";
 
+        // Obtener email del paciente desde auth
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+
         await supabase.functions.invoke("enviar-email-cita", {
           body: {
-            doctor_email: doctorProfile?.email || user.email,
-            doctor_name: doctorProfile?.full_name || "Doctor",
-            paciente_email: pacienteProfile?.email || user.email,
-            paciente_name: pacienteProfile?.full_name || "Paciente",
+            doctor_email: user.email, // fallback
+            doctor_name: doctor?.full_name || doctorPerfil?.full_name || "Doctor",
+            paciente_email: authUser?.email || user.email,
+            paciente_name: authUser?.user_metadata?.full_name || "Paciente",
             fecha: fechaFmt,
             hora,
             motivo: motivo || "Consulta general",
@@ -113,7 +104,6 @@ export default function Appointments() {
         });
       } catch (emailErr) {
         console.error("Error enviando email:", emailErr);
-        // No bloquear el flujo si falla el email
       }
     }
     setSaving(false);

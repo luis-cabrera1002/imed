@@ -107,24 +107,18 @@ export default function MedicineScanner() {
   async function processImage(file: File) {
     setMode("analizando");
 
-    // Preview
-    const reader = new FileReader();
-    reader.onload = (e) => setImagePreview(e.target?.result as string);
-    reader.readAsDataURL(file);
-
     try {
-      // Convertir a base64
-      const base64 = await new Promise<string>((resolve, reject) => {
+      // Convertir a base64 y preview al mismo tiempo
+      const dataUrl = await new Promise<string>((resolve, reject) => {
         const r = new FileReader();
-        r.onload = () => {
-          const result = r.result as string;
-          resolve(result.split(",")[1]);
-        };
+        r.onload = () => resolve(r.result as string);
         r.onerror = reject;
         r.readAsDataURL(file);
       });
 
-      const mimeType = file.type as "image/jpeg" | "image/png" | "image/webp";
+      setImagePreview(dataUrl);
+      const base64 = dataUrl.split(",")[1];
+      const mimeType = (file.type || "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
       const result = await analyzeWithClaude(base64, mimeType);
 
       if (result.nombre === "Desconocido" || result.confianza < 10) {

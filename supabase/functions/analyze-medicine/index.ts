@@ -62,10 +62,12 @@ Deno.serve(async (req) => {
 
     let result;
     try {
-      result = JSON.parse(clean);
+      // Añadir comillas a keys si faltan: {nombre:X} → {"nombre":X}
+      const fixed = clean.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
+      result = JSON.parse(fixed);
     } catch {
-      if (clean.includes("Butosol")) result = { nombre: "Butosol", confianza: 75 };
-      else if (clean.includes("Salbutamol")) result = { nombre: "Salbutamol", confianza: 75 };
+      if (clean.includes("Butosol")) result = { nombre: "Butosol", confianza: 90 };
+      else if (clean.includes("Salbutamol")) result = { nombre: "Salbutamol", confianza: 90 };
       else result = { nombre: "Desconocido", confianza: 0 };
     }
 

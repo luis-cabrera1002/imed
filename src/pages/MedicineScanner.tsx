@@ -117,17 +117,24 @@ export default function MedicineScanner() {
       });
 
       setImagePreview(dataUrl);
-      // Convertir cualquier formato (HEIC, etc) a JPEG via canvas
+      // Convertir a JPEG via canvas con timeout de seguridad
       const convertToJpeg = (src: string): Promise<string> =>
         new Promise((res) => {
           const img = new Image();
+          const timeout = setTimeout(() => res(src), 5000);
           img.onload = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            canvas.getContext("2d")!.drawImage(img, 0, 0);
-            res(canvas.toDataURL("image/jpeg", 0.85));
+            clearTimeout(timeout);
+            try {
+              const MAX = 1024;
+              const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+              const canvas = document.createElement("canvas");
+              canvas.width = Math.round(img.naturalWidth * scale);
+              canvas.height = Math.round(img.naturalHeight * scale);
+              canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+              res(canvas.toDataURL("image/jpeg", 0.8));
+            } catch { res(src); }
           };
+          img.onerror = () => { clearTimeout(timeout); res(src); };
           img.src = src;
         });
       const jpegDataUrl = await convertToJpeg(dataUrl);

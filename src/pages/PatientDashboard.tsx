@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
-  Search, User, Activity, LogOut, Star, Shield, Bell,
+  Search, User, Activity, LogOut, Star, Shield, Bell, Scan,
   ChevronRight, Eye, TrendingUp, Heart
 } from "lucide-react";
 
@@ -286,6 +286,7 @@ export default function PatientDashboard() {
                       { label: "Ver Mapa",       sub: "Cerca de ti",        icon: MapPin,    grad: "from-blue-500 to-blue-600",       path: "/mapa-doctores"},
                       { label: "Agendar Cita",   sub: "Flujo rápido",       icon: Calendar,  grad: "from-purple-500 to-purple-600",   path: "/citas"        },
                       { label: "Red BAM",         sub: "Seguro médico",      icon: Shield,    grad: "from-green-500 to-emerald-500",   path: "/medicos-bam"  },
+                      { label: "Escáner Med.",    sub: "Identificar med.",   icon: Scan,      grad: "from-orange-500 to-red-500",       path: "/escaner-medicamentos" },
                     ].map(({ label, sub, icon: Icon, grad, path }) => (
                       <button key={label} onClick={() => navigate(path)}
                         className="group flex flex-col items-start p-3 bg-background hover:bg-muted/40 rounded-xl border border-border/50 hover:border-primary/20 transition-all text-left">

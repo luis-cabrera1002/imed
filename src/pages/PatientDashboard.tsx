@@ -9,7 +9,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
   Search, User, Activity, LogOut, Star, Shield, Bell, Scan,
-  ChevronRight, Eye, TrendingUp, Heart
+  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill
 } from "lucide-react";
 
 const ESTADO: Record<string, { label: string; color: string; dot: string }> = {
@@ -19,7 +19,7 @@ const ESTADO: Record<string, { label: string; color: string; dot: string }> = {
   cancelada:  { label: "Cancelada",  color: "bg-red-100 text-red-700 border-red-200",            dot: "bg-red-400"    },
 };
 
-const TABS = ["Inicio", "Mis Citas", "Mis Recetas", "Mi Perfil"] as const;
+const TABS = ["Inicio", "Mis Citas", "Mis Recetas", "Mis Escaneos", "Mis Documentos", "Mi Perfil"] as const;
 type Tab = typeof TABS[number];
 
 export default function PatientDashboard() {
@@ -31,6 +31,10 @@ export default function PatientDashboard() {
   const [recetas, setRecetas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { supported, isSubscribed, permission, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
+  const [escaneos, setEscaneos]       = useState<any[]>([]);
+  const [documentos, setDocumentos]   = useState<any[]>([]);
+  const [uploading, setUploading]     = useState(false);
+  const [docLoading, setDocLoading]   = useState(false);
 
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
@@ -39,8 +43,66 @@ export default function PatientDashboard() {
 
   async function loadData(uid: string) {
     setLoading(true);
-    await Promise.all([loadPerfil(uid), loadCitas(uid), loadRecetas(uid)]);
+    await Promise.all([loadPerfil(uid), loadCitas(uid), loadRecetas(uid), loadEscaneos(uid), loadDocumentos(uid)]);
     setLoading(false);
+  }
+
+  async function loadEscaneos(uid: string) {
+    const { data } = await supabase
+      .from("medicine_scans")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (data) setEscaneos(data);
+  }
+
+  async function loadDocumentos(uid: string) {
+    setDocLoading(true);
+    const { data } = await supabase
+      .from("documentos_medicos")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false });
+    if (data) setDocumentos(data);
+    setDocLoading(false);
+  }
+
+  async function subirDocumento(file: File, tipo: string, descripcion: string) {
+    if (!user) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("documentos-medicos")
+        .upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+
+      const { data: urlData } = supabase.storage
+        .from("documentos-medicos")
+        .getPublicUrl(path);
+
+      const { error: dbErr } = await supabase.from("documentos_medicos").insert({
+        user_id: user.id,
+        nombre: file.name,
+        tipo,
+        url: urlData.publicUrl,
+        storage_path: path,
+        descripcion,
+      });
+      if (dbErr) throw dbErr;
+      await loadDocumentos(user.id);
+    } catch (e) {
+      console.error(e);
+    }
+    setUploading(false);
+  }
+
+  async function eliminarDocumento(doc: any) {
+    await supabase.storage.from("documentos-medicos").remove([doc.storage_path]);
+    await supabase.from("documentos_medicos").delete().eq("id", doc.id);
+    setDocumentos(prev => prev.filter(d => d.id !== doc.id));
   }
 
   async function loadPerfil(uid: string) {
@@ -470,6 +532,138 @@ export default function PatientDashboard() {
         )}
 
         {/* ══════════ MI PERFIL ══════════ */}
+        {/* ══ MIS ESCANEOS ══ */}
+        {activeTab === "Mis Escaneos" && (
+          <div className="space-y-4 pb-8">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold text-foreground">Mis Escaneos</h2>
+              <span className="text-xs text-muted-foreground">{escaneos.length} escaneos</span>
+            </div>
+            {escaneos.length === 0 ? (
+              <Card className="border border-border/50 shadow-sm rounded-2xl">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Scan className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-foreground mb-2">Sin escaneos aún</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Usá el escáner para identificar medicamentos</p>
+                  <Button className="bg-gradient-to-r from-primary to-secondary text-white rounded-xl"
+                    onClick={() => navigate("/escaner-medicamentos")}>
+                    <Scan className="w-4 h-4 mr-2" />Ir al Escáner
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {escaneos.map((s: any) => (
+                  <Card key={s.id} className="border border-border/50 shadow-sm rounded-2xl">
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${
+                        s.medicamento === "Butosol" ? "bg-red-100" :
+                        s.medicamento === "Salbutamol" ? "bg-blue-100" : "bg-gray-100"
+                      }`}>
+                        {s.medicamento === "Butosol" ? "🔴" : s.medicamento === "Salbutamol" ? "��" : "💊"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-foreground">{s.medicamento}</p>
+                        <p className="text-xs text-muted-foreground">{s.confianza}% confianza · {s.pais}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(s.created_at).toLocaleDateString("es-GT", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-xl text-xs"
+                        onClick={() => navigate("/escaner-medicamentos")}>
+                        <Scan className="w-3 h-3 mr-1" />Ver
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══ MIS DOCUMENTOS ══ */}
+        {activeTab === "Mis Documentos" && (
+          <div className="space-y-4 pb-8">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold text-foreground">Mis Documentos</h2>
+              <span className="text-xs text-muted-foreground">{documentos.length} archivos</span>
+            </div>
+
+            {/* Upload Card */}
+            <Card className="border border-border/50 shadow-sm rounded-2xl overflow-hidden">
+              <div className="bg-gradient-to-r from-primary/10 to-secondary/10 px-5 py-3">
+                <h3 className="font-bold text-foreground flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-primary" />Subir Documento
+                </h3>
+              </div>
+              <CardContent className="p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { tipo: "receta", label: "📋 Receta Médica", color: "from-blue-500 to-indigo-500" },
+                    { tipo: "laboratorio", label: "🧪 Laboratorio", color: "from-green-500 to-emerald-500" },
+                    { tipo: "radiografia", label: "🩻 Radiografía", color: "from-purple-500 to-violet-500" },
+                    { tipo: "otro", label: "📁 Otro", color: "from-gray-500 to-gray-600" },
+                  ].map(({ tipo, label, color }) => (
+                    <label key={tipo} className={`cursor-pointer flex items-center justify-center gap-2 p-3 bg-gradient-to-r ${color} text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png,.heic" className="hidden"
+                        onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (f) subirDocumento(f, tipo, tipo);
+                          e.target.value = "";
+                        }} />
+                      {uploading ? "Subiendo..." : label}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground text-center">PDF, JPG, PNG · Máx 10MB</p>
+              </CardContent>
+            </Card>
+
+            {/* Lista documentos */}
+            {docLoading ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">Cargando...</div>
+            ) : documentos.length === 0 ? (
+              <Card className="border border-border/50 shadow-sm rounded-2xl">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <FolderOpen className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-foreground mb-2">Sin documentos aún</h3>
+                  <p className="text-sm text-muted-foreground">Subí tus recetas, resultados de laboratorio o radiografías</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {documentos.map((doc: any) => (
+                  <Card key={doc.id} className="border border-border/50 shadow-sm rounded-2xl">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 text-lg">
+                        {doc.tipo === "receta" ? "📋" : doc.tipo === "laboratorio" ? "🧪" : doc.tipo === "radiografia" ? "🩻" : "📁"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground text-sm truncate">{doc.nombre}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{doc.tipo} · {new Date(doc.created_at).toLocaleDateString("es-GT", { day: "numeric", month: "short", year: "numeric" })}</p>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button size="sm" variant="outline" className="rounded-lg p-2 h-8 w-8"
+                          onClick={() => window.open(doc.url, "_blank")}>
+                          <Download className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="outline" className="rounded-lg p-2 h-8 w-8 text-red-500 hover:text-red-600 hover:border-red-200"
+                          onClick={() => eliminarDocumento(doc)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === "Mi Perfil" && (
           <div className="max-w-md space-y-4">
             <Card className="border border-border/50 shadow-sm">

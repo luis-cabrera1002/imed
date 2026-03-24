@@ -1,7 +1,17 @@
 Deno.serve(async (req) => {
   try {
     const body = await req.json();
-    const { doctor_email, doctor_name, paciente_email, paciente_name, fecha, hora, motivo } = body;
+    const { doctor_email, doctor_name, paciente_email, paciente_name, hora, motivo } = body;
+    const fechaRaw = body.fecha || "";
+    // Formatear fecha en español directamente aqui
+    const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    const dias = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+    let fecha = fechaRaw;
+    if (fechaRaw.includes("-")) {
+      const [y, m, d] = fechaRaw.split("-");
+      const dateObj = new Date(parseInt(y), parseInt(m)-1, parseInt(d));
+      fecha = `${dias[dateObj.getDay()]}, ${d} de ${meses[parseInt(m)-1]} de ${y}`;
+    }
 
     const emailStyle = `
       <style>

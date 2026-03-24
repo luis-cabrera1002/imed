@@ -27,16 +27,23 @@ Deno.serve(async (req) => {
           contents: [{
             parts: [
               { inline_data: { mime_type: validMime, data: image } },
-              { text: "Analizá esta imagen de un medicamento. IMPORTANTE: Solo respondé con JSON puro, sin markdown, sin texto extra. Si ves un inhalador ROJO o NARANJA o dice Butosol responde: {nombre: Butosol, confianza: 90}. Si ves un inhalador AZUL o dice Salbutamol o Ventolin responde: {nombre: Salbutamol, confianza: 90}. Si no es un inhalador responde: {nombre: Desconocido, confianza: 0}" }
+              { text: "Look at this image carefully. Is there an inhaler or aerosol device? If yes: if it is RED or ORANGE or says Butosol, respond ONLY with this exact JSON: {\"nombre\": \"Butosol\", \"confianza\": 90}. If it is BLUE or says Salbutamol or Ventolin, respond ONLY with: {\"nombre\": \"Salbutamol\", \"confianza\": 90}. If you cannot identify it as one of those two, respond ONLY with: {\"nombre\": \"Desconocido\", \"confianza\": 0}. No markdown, no explanation, ONLY the JSON object." }
             ]
           }],
-          generationConfig: { maxOutputTokens: 100, temperature: 0.1 }
+          generationConfig: { maxOutputTokens: 50, temperature: 0.0 }
         })
       }
     );
 
     const data = await response.json();
     console.log("Gemini raw:", JSON.stringify(data));
+
+    if (data.error) {
+      console.error("Gemini error:", JSON.stringify(data.error));
+      return new Response(JSON.stringify({ nombre: "Desconocido", confianza: 0 }), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    }
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{"nombre":"Desconocido","confianza":0}';
     console.log("Gemini text:", text);

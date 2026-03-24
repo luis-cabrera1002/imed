@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -12,219 +12,141 @@ import {
   ChevronDown, ChevronUp, Video, Pill
 } from "lucide-react";
 
-const MODEL_URL = "https://teachablemachine.withgoogle.com/models/1F6MFz8rg/";
-
-// ── Base de datos completa de medicamentos ──
 const MEDICINE_DB: Record<string, any> = {
   "Butosol": {
     nombre: "Butosol",
     nombreComercial: "Butosol®",
-    laboratorio: "Laboratorios Leti / Distribuidores GT",
+    laboratorio: "Grünenthal Guatemala",
     ingredienteActivo: "Sulfato de Salbutamol",
     concentracion: "100 mcg/dosis",
     tipo: "Broncodilatador β2-agonista de acción corta (SABA)",
-    color: "rojo/naranja",
+    color: "rojo",
     emoji: "🔴",
-    descripcion: "Inhalador de rescate de uso común en Guatemala y Centroamérica. Utilizado para el alivio rápido del broncoespasmo en asma y EPOC. Contiene el mismo principio activo que el Ventolin pero distribuido localmente.",
+    descripcion: "Inhalador de rescate de uso común en Guatemala y Centroamérica. Mismo principio activo que el Ventolin/Salbutamol pero con distribución local.",
     indicaciones: ["Asma bronquial", "EPOC", "Broncoespasmo agudo", "Bronquitis obstructiva"],
     ingredientes: [
-      { nombre: "Sulfato de Salbutamol (Albuterol)", presente: true, descripcion: "Principio activo — relaja los músculos de las vías respiratorias" },
-      { nombre: "Propelente HFA-134a", presente: true, descripcion: "Propelente sin CFC, ecológico" },
-      { nombre: "Etanol anhidro", presente: true, descripcion: "Cosolvente farmacéutico" },
-      { nombre: "Ácido oleico", presente: false, descripcion: "Lubricante (ausente en esta fórmula)" },
-      { nombre: "Cloruro de bencetonio", presente: false, descripcion: "Conservante (no aplica en MDI)" },
-      { nombre: "Corticosteroide inhalado", presente: false, descripcion: "No es inhalador de mantenimiento" },
-      { nombre: "Ipratropio bromuro", presente: false, descripcion: "No es combinado — solo salbutamol" },
+      { nombre: "Sulfato de Salbutamol (Albuterol)", presente: true,  descripcion: "Principio activo — relaja los músculos de las vías respiratorias" },
+      { nombre: "Propelente HFA-134a",               presente: true,  descripcion: "Propelente ecológico sin CFC" },
+      { nombre: "Etanol anhidro",                     presente: true,  descripcion: "Cosolvente farmacéutico" },
+      { nombre: "Ácido oleico",                       presente: false, descripcion: "Lubricante (ausente en esta fórmula)" },
+      { nombre: "Corticosteroide inhalado",           presente: false, descripcion: "No es inhalador de mantenimiento" },
+      { nombre: "Ipratropio bromuro",                 presente: false, descripcion: "No es combinado — solo salbutamol" },
     ],
     equivalentes: [
-      { pais: "🇺🇸 EE.UU.", nombre: "Ventolin HFA / ProAir HFA", laboratorio: "GSK / Teva" },
-      { pais: "🇪🇸 España", nombre: "Ventolin / Salbutamol Sandoz", laboratorio: "GSK / Sandoz" },
-      { pais: "🇫🇷 Francia", nombre: "Ventoline / Airomir", laboratorio: "GSK / Teva" },
-      { pais: "🇩🇪 Alemania", nombre: "Sultanol / Salbutamol-ratiopharm", laboratorio: "GSK / Ratiopharm" },
-      { pais: "🇲🇽 México", nombre: "Salbulair / Asmalair", laboratorio: "Asofarma / Chinoin" },
-      { pais: "🇨🇴 Colombia", nombre: "Ventolin / Salbutamol MK", laboratorio: "GSK / Tecnoquímicas" },
-      { pais: "🇦🇷 Argentina", nombre: "Aldobronquial / Ventolin", laboratorio: "Roemmers / GSK" },
-      { pais: "🇧🇷 Brasil", nombre: "Aerolin / Salbulair", laboratorio: "GSK / Aché" },
-      { pais: "🇨🇦 Canadá", nombre: "Ventolin HFA / Airomir", laboratorio: "GSK / Teva" },
-      { pais: "🇬🇧 Reino Unido", nombre: "Ventolin Evohaler / Salamol", laboratorio: "GSK / Norton" },
+      { pais: "🇺🇸 EE.UU.",      nombre: "Ventolin HFA / ProAir HFA",       laboratorio: "GSK / Teva" },
+      { pais: "🇪🇸 España",       nombre: "Ventolin / Salbutamol Sandoz",     laboratorio: "GSK / Sandoz" },
+      { pais: "🇫🇷 Francia",      nombre: "Ventoline / Airomir",              laboratorio: "GSK / Teva" },
+      { pais: "🇩🇪 Alemania",     nombre: "Sultanol / Salbutamol-ratiopharm", laboratorio: "GSK / Ratiopharm" },
+      { pais: "🇲🇽 México",       nombre: "Salbulair / Asmalair",             laboratorio: "Asofarma / Chinoin" },
+      { pais: "🇨🇴 Colombia",     nombre: "Ventolin / Salbutamol MK",         laboratorio: "GSK / Tecnoquímicas" },
+      { pais: "🇦🇷 Argentina",    nombre: "Aldobronquial / Ventolin",          laboratorio: "Roemmers / GSK" },
+      { pais: "🇧🇷 Brasil",       nombre: "Aerolin / Salbulair",              laboratorio: "GSK / Aché" },
+      { pais: "🇬🇧 Reino Unido",  nombre: "Ventolin Evohaler / Salamol",      laboratorio: "GSK / Norton" },
+      { pais: "🇨🇦 Canadá",       nombre: "Ventolin HFA / Airomir",           laboratorio: "GSK / Teva" },
     ]
   },
   "Salbutamol": {
     nombre: "Salbutamol",
     nombreComercial: "Ventolin® / Genérico",
-    laboratorio: "GlaxoSmithKline / Múltiples laboratorios",
+    laboratorio: "GlaxoSmithKline / Múltiples",
     ingredienteActivo: "Sulfato de Salbutamol",
     concentracion: "100 mcg/dosis",
     tipo: "Broncodilatador β2-agonista de acción corta (SABA)",
     color: "azul",
     emoji: "🔵",
-    descripcion: "Inhalador broncodilatador de rescate más usado en el mundo. Disponible como Ventolin (marca) o genérico en prácticamente todos los países. Mismo mecanismo de acción que Butosol — son bioequivalentes.",
-    indicaciones: ["Asma bronquial", "EPOC", "Broncoespasmo agudo", "Profilaxis de asma inducida por ejercicio"],
+    descripcion: "Inhalador broncodilatador de rescate más usado en el mundo. Disponible en prácticamente todos los países como Ventolin o genérico.",
+    indicaciones: ["Asma bronquial", "EPOC", "Broncoespasmo agudo", "Profilaxis de asma por ejercicio"],
     ingredientes: [
-      { nombre: "Sulfato de Salbutamol (Albuterol)", presente: true, descripcion: "Principio activo — relaja los músculos de las vías respiratorias" },
-      { nombre: "Propelente HFA-134a", presente: true, descripcion: "Propelente sin CFC, ecológico" },
-      { nombre: "Etanol anhidro", presente: true, descripcion: "Cosolvente farmacéutico" },
-      { nombre: "Ácido oleico", presente: true, descripcion: "Lubricante para válvula dosificadora" },
-      { nombre: "Cloruro de bencetonio", presente: false, descripcion: "Conservante (no aplica en MDI)" },
-      { nombre: "Corticosteroide inhalado", presente: false, descripcion: "No es inhalador de mantenimiento" },
-      { nombre: "Ipratropio bromuro", presente: false, descripcion: "No es combinado — solo salbutamol" },
+      { nombre: "Sulfato de Salbutamol (Albuterol)", presente: true,  descripcion: "Principio activo — relaja los músculos de las vías respiratorias" },
+      { nombre: "Propelente HFA-134a",               presente: true,  descripcion: "Propelente ecológico sin CFC" },
+      { nombre: "Etanol anhidro",                     presente: true,  descripcion: "Cosolvente farmacéutico" },
+      { nombre: "Ácido oleico",                       presente: true,  descripcion: "Lubricante para válvula dosificadora" },
+      { nombre: "Corticosteroide inhalado",           presente: false, descripcion: "No es inhalador de mantenimiento" },
+      { nombre: "Ipratropio bromuro",                 presente: false, descripcion: "No es combinado — solo salbutamol" },
     ],
     equivalentes: [
-      { pais: "🇬🇹 Guatemala", nombre: "Butosol / Salbulair GT", laboratorio: "Leti / Asofarma" },
-      { pais: "🇺🇸 EE.UU.", nombre: "ProAir HFA / Proventil HFA", laboratorio: "Teva / Merck" },
-      { pais: "🇲🇽 México", nombre: "Salbulair / Asmalair / Sultanol", laboratorio: "Asofarma / Chinoin / GSK" },
-      { pais: "🇦🇷 Argentina", nombre: "Aldobronquial / Broncovaleas", laboratorio: "Roemmers / Chiesi" },
-      { pais: "🇨🇴 Colombia", nombre: "Salbutamol MK / Aldolair", laboratorio: "Tecnoquímicas / MK" },
-      { pais: "🇧🇷 Brasil", nombre: "Aerolin / Salbulair", laboratorio: "GSK / Aché" },
-      { pais: "🇨🇱 Chile", nombre: "Salbutamol Genfar / Servamol", laboratorio: "Genfar / Saval" },
-      { pais: "🇵🇪 Perú", nombre: "Salbutamol Genfar / Aldolair", laboratorio: "Genfar / Farmindustria" },
+      { pais: "🇬🇹 Guatemala",    nombre: "Butosol / Salbulair GT",     laboratorio: "Grünenthal / Asofarma" },
+      { pais: "🇺🇸 EE.UU.",       nombre: "ProAir HFA / Proventil HFA", laboratorio: "Teva / Merck" },
+      { pais: "🇲🇽 México",       nombre: "Salbulair / Sultanol",        laboratorio: "Asofarma / GSK" },
+      { pais: "🇦🇷 Argentina",    nombre: "Aldobronquial / Broncovaleas", laboratorio: "Roemmers / Chiesi" },
+      { pais: "🇨🇴 Colombia",     nombre: "Salbutamol MK / Aldolair",    laboratorio: "Tecnoquímicas / MK" },
+      { pais: "🇧🇷 Brasil",       nombre: "Aerolin / Salbulair",         laboratorio: "GSK / Aché" },
+      { pais: "🇨🇱 Chile",        nombre: "Salbutamol Genfar / Servamol",laboratorio: "Genfar / Saval" },
+      { pais: "🇵🇪 Perú",         nombre: "Salbutamol Genfar / Aldolair",laboratorio: "Genfar / Farmindustria" },
     ]
   }
 };
 
-type Mode = "inicio" | "camara" | "analizando" | "resultado" | "error";
+type Mode = "inicio" | "analizando" | "resultado" | "error";
 
 export default function MedicineScanner() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const videoRef  = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const navigate  = useNavigate();
+  const { user }  = useAuth();
   const fileRef   = useRef<HTMLInputElement>(null);
+  const camRef    = useRef<HTMLInputElement>(null);
 
   const [mode, setMode]               = useState<Mode>("inicio");
-  const [modelReady, setModelReady]   = useState(false);
-  const [loadingModel, setLoadingModel] = useState(false);
-  const [tmModel, setTmModel]         = useState<any>(null);
   const [resultado, setResultado]     = useState<{ clase: string; confianza: number } | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [showIngr, setShowIngr]       = useState(true);
   const [showEquiv, setShowEquiv]     = useState(false);
-  const [streamActive, setStreamActive] = useState(false);
   const [errorMsg, setErrorMsg]       = useState("");
 
-  useEffect(() => {
-    return () => stopCamera();
-  }, []);
-
-  // Esperar a que TF esté disponible en window
-  const waitForTM = useCallback((): Promise<any> => {
-    return new Promise((resolve, reject) => {
-      let attempts = 0;
-      const check = () => {
-        // @ts-ignore
-        if (window.tmImage) { resolve(window.tmImage); return; }
-        attempts++;
-        if (attempts > 10) { reject(new Error("Teachable Machine no disponible")); return; }
-        setTimeout(check, 500);
-      };
-      check();
+  // Analiza la imagen con Claude API (vision)
+  async function analyzeWithClaude(base64: string, mimeType: string) {
+    const response = await fetch("https://usmjxdoboaxpbmuoproo.supabase.co/functions/v1/analyze-medicine", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzbWp4ZG9ib2F4cGJtdW9wcm9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODE5NTYsImV4cCI6MjA4OTQ1Nzk1Nn0.KnBC3PNZIEpvtn3jSw8M6octoXcBHFh1XPb7CQsW968" },
+      body: JSON.stringify({ image: base64, mimeType })
     });
-  }, []);
 
-  async function loadModel() {
-    if (modelReady && tmModel) return tmModel;
-    setLoadingModel(true);
-    try {
-      const tmImage = await waitForTM();
-      const model = await tmImage.load(
-        MODEL_URL + "model.json",
-        MODEL_URL + "metadata.json"
-      );
-      setTmModel(model);
-      setModelReady(true);
-      setLoadingModel(false);
-      return model;
-    } catch (err: any) {
-      setLoadingModel(false);
-      setErrorMsg("No se pudo cargar el modelo de IA. Revisá tu conexión.");
-      throw err;
-    }
+    const data = await response.json();
+    const text = data.content?.[0]?.text || '{"nombre":"Desconocido","confianza":0}';
+    return JSON.parse(text.trim());
   }
 
-  async function startCamera() {
-    try {
-      const model = await loadModel();
-      if (!model) return;
-      setMode("camara");
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        setStreamActive(true);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.name === "NotAllowedError"
-        ? "Permiso de cámara denegado. Activalo en la configuración del navegador."
-        : "No se pudo acceder a la cámara.");
-      setMode("error");
-    }
-  }
-
-  function stopCamera() {
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
-      videoRef.current.srcObject = null;
-      setStreamActive(false);
-    }
-  }
-
-  async function captureAndScan() {
-    if (!videoRef.current || !canvasRef.current || !tmModel) return;
+  async function processImage(file: File) {
     setMode("analizando");
-    const canvas = canvasRef.current;
-    const video  = videoRef.current;
-    canvas.width  = video.videoWidth  || 640;
-    canvas.height = video.videoHeight || 480;
-    canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    setImagePreview(canvas.toDataURL("image/jpeg", 0.8));
-    stopCamera();
-    await runPrediction(canvas);
-  }
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMode("analizando");
+    // Preview
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+
     try {
-      const model = await loadModel();
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const src = ev.target?.result as string;
-        setImagePreview(src);
-        const img = new Image();
-        img.onload = async () => {
-          const canvas = document.createElement("canvas");
-          canvas.width  = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          canvas.getContext("2d")?.drawImage(img, 0, 0);
-          await runPrediction(canvas, model);
+      // Convertir a base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+          const result = r.result as string;
+          resolve(result.split(",")[1]);
         };
-        img.src = src;
-      };
-      reader.readAsDataURL(file);
-    } catch {
-      setMode("error");
-    }
-  }
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
 
-  async function runPrediction(canvas: HTMLCanvasElement, model?: any) {
-    const m = model || tmModel;
-    if (!m) { setMode("error"); return; }
-    try {
-      const predictions: { className: string; probability: number }[] = await m.predict(canvas);
-      const best = predictions.reduce((a, b) => a.probability > b.probability ? a : b);
-      setResultado({ clase: best.className, confianza: Math.round(best.probability * 100) });
+      const mimeType = file.type as "image/jpeg" | "image/png" | "image/webp";
+      const result = await analyzeWithClaude(base64, mimeType);
+
+      if (result.nombre === "Desconocido" || result.confianza < 30) {
+        setErrorMsg("No pudimos identificar el medicamento. Intentá con mejor iluminación y enfocando bien la etiqueta.");
+        setMode("error");
+        return;
+      }
+
+      setResultado({ clase: result.nombre, confianza: result.confianza });
       setMode("resultado");
-    } catch {
-      setErrorMsg("No pudimos analizar la imagen. Intentá con mejor iluminación.");
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Error al analizar la imagen. Revisá tu conexión e intentá de nuevo.");
       setMode("error");
     }
   }
 
-  const medInfo  = resultado ? MEDICINE_DB[resultado.clase] : null;
-  const otroMed  = resultado ? Object.values(MEDICINE_DB).find((m: any) => m.nombre !== resultado.clase) as any : null;
+  const medInfo = resultado ? MEDICINE_DB[resultado.clase] : null;
+  const otroMed = resultado
+    ? (Object.values(MEDICINE_DB).find((m: any) => m.nombre !== resultado.clase) as any)
+    : null;
 
   const comparativa = medInfo && otroMed
     ? medInfo.ingredientes.map((ing: any) => ({
@@ -233,7 +155,6 @@ export default function MedicineScanner() {
       }))
     : [];
 
-  // ── Sin sesión ──
   if (!user) return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -285,11 +206,11 @@ export default function MedicineScanner() {
                 </h3>
                 <div className="space-y-3">
                   {[
-                    { n: "1", t: "Tomá una foto clara del medicamento o subí una imagen", ic: Camera },
-                    { n: "2", t: "La IA identifica el medicamento automáticamente", ic: Scan },
-                    { n: "3", t: "Ves el checklist comparativo de ingredientes activos", ic: CheckCircle },
-                    { n: "4", t: "Encontrás su equivalente en más de 10 países", ic: MapPin },
-                  ].map(({ n, t, ic: Icon }) => (
+                    { n: "1", t: "Tomá una foto clara del medicamento o subí una imagen" },
+                    { n: "2", t: "La IA identifica el medicamento en segundos" },
+                    { n: "3", t: "Ves el checklist comparativo de ingredientes activos" },
+                    { n: "4", t: "Encontrás su equivalente en más de 10 países" },
+                  ].map(({ n, t }) => (
                     <div key={n} className="flex items-start gap-3">
                       <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <span className="text-xs font-bold text-primary">{n}</span>
@@ -327,61 +248,36 @@ export default function MedicineScanner() {
 
             {/* Botones */}
             <div className="space-y-3">
+              {/* Cámara directa en mobile */}
               <Button
                 className="w-full py-4 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-xl shadow-md gap-2 text-base"
-                onClick={startCamera}
-                disabled={loadingModel}
+                onClick={() => camRef.current?.click()}
               >
-                {loadingModel
-                  ? <><RefreshCw className="w-5 h-5 animate-spin" />Cargando IA...</>
-                  : <><Camera className="w-5 h-5" />Usar Cámara</>
-                }
+                <Camera className="w-5 h-5" />Tomar Foto
               </Button>
-              <Button variant="outline"
+              <input
+                ref={camRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) processImage(f); }}
+              />
+
+              <Button
+                variant="outline"
                 className="w-full py-4 rounded-xl gap-2 text-base border-border/50"
                 onClick={() => fileRef.current?.click()}
-                disabled={loadingModel}
               >
                 <Upload className="w-5 h-5" />Subir Foto de Galería
               </Button>
-              <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
-            </div>
-          </div>
-        )}
-
-        {/* ══ CÁMARA ══ */}
-        {mode === "camara" && (
-          <div className="max-w-lg mx-auto px-4 py-6">
-            <div className="text-center mb-4">
-              <h2 className="font-bold text-foreground text-lg">Enfocá el medicamento</h2>
-              <p className="text-sm text-muted-foreground">Asegurate que esté bien iluminado y centrado en el recuadro</p>
-            </div>
-            <div className="relative rounded-2xl overflow-hidden bg-black shadow-xl mb-4">
-              <video ref={videoRef} autoPlay playsInline muted
-                className="w-full aspect-[4/3] object-cover" />
-              <canvas ref={canvasRef} className="hidden" />
-              {/* Marco guía */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-52 h-52 border-4 border-white/70 rounded-2xl shadow-lg">
-                  <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg" />
-                  <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg" />
-                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg" />
-                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg" />
-                </div>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <Button
-                className="w-full py-4 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-xl gap-2 text-base"
-                onClick={captureAndScan}
-                disabled={!streamActive}
-              >
-                <Scan className="w-5 h-5" />Escanear Ahora
-              </Button>
-              <Button variant="outline" className="w-full py-3 rounded-xl border-border/50"
-                onClick={() => { stopCamera(); setMode("inicio"); }}>
-                Cancelar
-              </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) processImage(f); }}
+              />
             </div>
           </div>
         )}
@@ -390,13 +286,16 @@ export default function MedicineScanner() {
         {mode === "analizando" && (
           <div className="max-w-lg mx-auto px-4 py-12 text-center">
             {imagePreview && (
-              <img src={imagePreview} className="w-40 h-40 rounded-2xl object-cover mx-auto mb-6 shadow-lg" alt="analizando" />
+              <img src={imagePreview}
+                className="w-44 h-44 rounded-2xl object-cover mx-auto mb-6 shadow-lg border-4 border-primary/20"
+                alt="analizando" />
             )}
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <RefreshCw className="w-8 h-8 text-primary animate-spin" />
             </div>
             <h2 className="text-xl font-bold text-foreground mb-2">Analizando con IA...</h2>
             <p className="text-muted-foreground text-sm">Identificando el medicamento y buscando equivalentes</p>
+            <p className="text-xs text-muted-foreground mt-2">Esto toma unos segundos ☕</p>
           </div>
         )}
 
@@ -404,22 +303,26 @@ export default function MedicineScanner() {
         {mode === "resultado" && resultado && medInfo && (
           <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
 
-            {/* Header */}
+            {/* Header resultado */}
             <div className="flex items-center gap-4 p-4 bg-green-50 rounded-2xl border border-green-100">
               {imagePreview && (
-                <img src={imagePreview} className="w-16 h-16 rounded-xl object-cover border-2 border-green-200 flex-shrink-0" alt="resultado" />
+                <img src={imagePreview}
+                  className="w-16 h-16 rounded-xl object-cover border-2 border-green-200 flex-shrink-0"
+                  alt="resultado" />
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1">
                   <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-xs font-semibold text-green-600">Identificado con {resultado.confianza}% de certeza</span>
+                  <span className="text-xs font-semibold text-green-600">
+                    Identificado con {resultado.confianza}% de certeza
+                  </span>
                 </div>
                 <h2 className="text-xl font-bold text-foreground">{medInfo.emoji} {medInfo.nombre}</h2>
                 <p className="text-sm text-primary font-medium">{medInfo.ingredienteActivo} · {medInfo.concentracion}</p>
               </div>
             </div>
 
-            {/* Info card */}
+            {/* Info */}
             <Card className="border border-border/50 shadow-sm rounded-2xl overflow-hidden">
               <div className="bg-gradient-to-r from-primary/10 to-secondary/10 px-5 py-3">
                 <p className="font-bold text-foreground">{medInfo.nombreComercial}</p>
@@ -443,62 +346,65 @@ export default function MedicineScanner() {
                   <h3 className="font-bold text-foreground text-left flex items-center gap-2">
                     <Scan className="w-4 h-4 text-primary" />Checklist de Ingredientes
                   </h3>
-                  {otroMed && <p className="text-xs text-muted-foreground text-left mt-0.5">{medInfo.nombre} vs. {otroMed.nombre}</p>}
+                  {otroMed && (
+                    <p className="text-xs text-muted-foreground text-left mt-0.5">
+                      {medInfo.nombre} vs. {otroMed.nombre}
+                    </p>
+                  )}
                 </div>
-                {showIngr ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+                {showIngr
+                  ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                }
               </button>
 
               {showIngr && (
                 <CardContent className="px-5 pb-5 pt-0">
-                  {/* Headers tabla */}
-                  <div className="grid grid-cols-[1fr_80px_80px] gap-2 mb-3 px-1">
+                  <div className="grid grid-cols-[1fr_70px_70px] gap-2 mb-3 px-1">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Componente</p>
                     <p className="text-xs font-bold text-center text-primary uppercase tracking-wide">{medInfo.nombre}</p>
                     <p className="text-xs font-bold text-center text-secondary uppercase tracking-wide">{otroMed?.nombre}</p>
                   </div>
-
                   <div className="space-y-1.5">
                     {comparativa.map((ing: any, i: number) => (
-                      <div key={i} className={`grid grid-cols-[1fr_80px_80px] gap-2 items-center p-3 rounded-xl transition-colors ${
-                        ing.presente && ing.enOtro ? "bg-green-50 border border-green-100" :
+                      <div key={i} className={`grid grid-cols-[1fr_70px_70px] gap-2 items-center p-3 rounded-xl ${
+                        ing.presente && ing.enOtro   ? "bg-green-50 border border-green-100" :
                         !ing.presente && !ing.enOtro ? "bg-muted/20" :
-                        "bg-yellow-50 border border-yellow-100"
+                                                       "bg-yellow-50 border border-yellow-100"
                       }`}>
                         <div>
                           <p className="text-xs font-semibold text-foreground leading-tight">{ing.nombre}</p>
                           <p className="text-xs text-muted-foreground leading-tight mt-0.5">{ing.descripcion}</p>
                         </div>
-                        <div className="flex flex-col items-center gap-1">
+                        <div className="flex flex-col items-center gap-0.5">
                           {ing.presente
                             ? <CheckCircle className="w-5 h-5 text-green-500" />
                             : <XCircle className="w-5 h-5 text-gray-300" />
                           }
-                          <span className="text-xs font-medium" style={{ color: ing.presente ? '#16a34a' : '#9ca3af' }}>
+                          <span className={`text-xs font-bold ${ing.presente ? "text-green-600" : "text-gray-400"}`}>
                             {ing.presente ? "Sí" : "No"}
                           </span>
                         </div>
-                        <div className="flex flex-col items-center gap-1">
+                        <div className="flex flex-col items-center gap-0.5">
                           {ing.enOtro
                             ? <CheckCircle className="w-5 h-5 text-green-500" />
                             : <XCircle className="w-5 h-5 text-gray-300" />
                           }
-                          <span className="text-xs font-medium" style={{ color: ing.enOtro ? '#16a34a' : '#9ca3af' }}>
+                          <span className={`text-xs font-bold ${ing.enOtro ? "text-green-600" : "text-gray-400"}`}>
                             {ing.enOtro ? "Sí" : "No"}
                           </span>
                         </div>
                       </div>
                     ))}
                   </div>
-
-                  {/* Conclusión */}
                   <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
                     <div className="flex items-start gap-2">
                       <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-bold text-green-800">Son bioequivalentes ✅</p>
                         <p className="text-xs text-green-700 mt-1">
-                          Ambos contienen <strong>Sulfato de Salbutamol 100 mcg/dosis</strong> como principio activo.
-                          Tienen el mismo efecto terapéutico y pueden sustituirse entre sí bajo supervisión médica.
+                          Ambos contienen <strong>Sulfato de Salbutamol 100 mcg/dosis</strong>.
+                          Mismo efecto terapéutico — pueden sustituirse bajo supervisión médica.
                         </p>
                       </div>
                     </div>
@@ -507,7 +413,7 @@ export default function MedicineScanner() {
               )}
             </Card>
 
-            {/* ── EQUIVALENTES POR PAÍS ── */}
+            {/* ── EQUIVALENTES ── */}
             <Card className="border border-border/50 shadow-sm rounded-2xl">
               <button className="w-full px-5 py-4 flex items-center justify-between"
                 onClick={() => setShowEquiv(!showEquiv)}>
@@ -518,14 +424,16 @@ export default function MedicineScanner() {
                     {medInfo.equivalentes.length} países
                   </Badge>
                 </h3>
-                {showEquiv ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                {showEquiv
+                  ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                }
               </button>
-
               {showEquiv && (
                 <CardContent className="px-5 pb-5 pt-0">
                   <div className="space-y-2">
                     {medInfo.equivalentes.map((eq: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
                         <div className="flex items-center gap-3">
                           <span className="text-xl">{eq.pais.split(" ")[0]}</span>
                           <div>
@@ -543,18 +451,20 @@ export default function MedicineScanner() {
               )}
             </Card>
 
-            {/* ── FARMACIAS CERCANAS ── */}
+            {/* Farmacias */}
             <Card className="border border-border/50 shadow-sm rounded-2xl overflow-hidden">
               <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-5 py-3">
                 <h3 className="font-bold text-white flex items-center gap-2">
                   <MapPin className="w-4 h-4" />Farmacias Cercanas
                 </h3>
-                <p className="text-xs text-green-100 mt-0.5">Encontrá dónde comprar {medInfo.nombre} cerca de vos</p>
               </div>
               <CardContent className="p-4">
                 <div className="grid grid-cols-2 gap-2">
                   <Button className="bg-green-600 hover:bg-green-700 text-white rounded-xl gap-1.5 text-sm"
-                    onClick={() => window.open(`https://www.google.com/maps/search/farmacia+${encodeURIComponent(medInfo.nombre)}`, "_blank")}>
+                    onClick={() => window.open(
+                      `https://www.google.com/maps/search/farmacia+${encodeURIComponent(medInfo.nombre)}`,
+                      "_blank"
+                    )}>
                     <MapPin className="w-4 h-4" />Google Maps
                   </Button>
                   <Button variant="outline" className="rounded-xl gap-1.5 text-sm border-green-200 text-green-700 hover:bg-green-50"
@@ -569,14 +479,17 @@ export default function MedicineScanner() {
             <div className="flex items-start gap-2 p-3 bg-yellow-50 rounded-xl border border-yellow-100">
               <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-yellow-700">
-                <strong>Aviso médico:</strong> Esta herramienta es informativa. Consultá siempre con un médico o farmacéutico antes de sustituir cualquier medicamento.
+                <strong>Aviso médico:</strong> Esta herramienta es informativa.
+                Consultá siempre con un médico o farmacéutico antes de sustituir cualquier medicamento.
               </p>
             </div>
 
             {/* Botones finales */}
             <div className="space-y-3 pb-8">
-              <Button className="w-full py-3 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-xl gap-2"
-                onClick={() => { setMode("inicio"); setResultado(null); setImagePreview(""); }}>
+              <Button
+                className="w-full py-3 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-xl gap-2"
+                onClick={() => { setMode("inicio"); setResultado(null); setImagePreview(""); }}
+              >
                 <Scan className="w-4 h-4" />Escanear otro medicamento
               </Button>
               <Button variant="outline" className="w-full py-3 rounded-xl border-border/50"
@@ -590,19 +503,23 @@ export default function MedicineScanner() {
         {/* ══ ERROR ══ */}
         {mode === "error" && (
           <div className="max-w-lg mx-auto px-4 py-12 text-center">
-            <XCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Algo salió mal</h2>
-            <p className="text-muted-foreground text-sm mb-6">{errorMsg || "Intentá de nuevo con mejor iluminación."}</p>
+            {imagePreview && (
+              <img src={imagePreview}
+                className="w-32 h-32 rounded-2xl object-cover mx-auto mb-4 shadow-lg opacity-60"
+                alt="error" />
+            )}
+            <XCircle className="w-14 h-14 text-destructive mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">No pudimos identificarlo</h2>
+            <p className="text-muted-foreground text-sm mb-6 max-w-xs mx-auto">
+              {errorMsg || "Intentá con mejor iluminación y enfocando bien la etiqueta del medicamento."}
+            </p>
             <div className="space-y-3">
-              <Button className="w-full rounded-xl bg-gradient-to-r from-primary to-secondary text-white"
-                onClick={() => { setMode("inicio"); setErrorMsg(""); }}>
-                Volver a intentar
+              <Button
+                className="w-full rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold gap-2"
+                onClick={() => { setMode("inicio"); setErrorMsg(""); setImagePreview(""); }}
+              >
+                <Camera className="w-4 h-4" />Intentar de nuevo
               </Button>
-              <Button variant="outline" className="w-full rounded-xl gap-2"
-                onClick={() => { setMode("inicio"); setErrorMsg(""); setTimeout(() => fileRef.current?.click(), 200); }}>
-                <Upload className="w-4 h-4" />Subir foto en su lugar
-              </Button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
             </div>
           </div>
         )}

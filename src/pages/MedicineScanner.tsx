@@ -117,8 +117,22 @@ export default function MedicineScanner() {
       });
 
       setImagePreview(dataUrl);
-      const base64 = dataUrl.split(",")[1];
-      const mimeType = (file.type || "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
+      // Convertir cualquier formato (HEIC, etc) a JPEG via canvas
+      const convertToJpeg = (src: string): Promise<string> =>
+        new Promise((res) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.getContext("2d")!.drawImage(img, 0, 0);
+            res(canvas.toDataURL("image/jpeg", 0.85));
+          };
+          img.src = src;
+        });
+      const jpegDataUrl = await convertToJpeg(dataUrl);
+      const base64 = jpegDataUrl.split(",")[1].replace(/\s/g, "");
+      const mimeType = "image/jpeg" as "image/jpeg";
       const result = await analyzeWithClaude(base64, mimeType);
 
       if (result.nombre === "Desconocido" || result.confianza < 10) {

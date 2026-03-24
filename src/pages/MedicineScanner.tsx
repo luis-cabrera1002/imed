@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -91,6 +91,53 @@ export default function MedicineScanner() {
   const [showIngr, setShowIngr]       = useState(true);
   const [showEquiv, setShowEquiv]     = useState(false);
   const [errorMsg, setErrorMsg]       = useState("");
+  const [isMobile]                    = useState(() => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+  const videoRef                      = useRef<HTMLVideoElement>(null);
+  const streamRef                     = useRef<MediaStream | null>(null);
+
+  // Captura frame del video y analiza
+  async function captureAndAnalyze() {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = 640;
+    canvas.height = 480;
+    canvas.getContext("2d")!.drawImage(video, 0, 0, 640, 480);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    setImagePreview(dataUrl);
+    // Detener camara
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    setMode("analizando");
+    try {
+      const base64 = dataUrl.split(",")[1];
+      const result = await analyzeWithClaude(base64, "image/jpeg");
+      if (result.nombre === "Desconocido" || result.confianza < 10) {
+        setErrorMsg("No pudimos identificar el medicamento. Intentá enfocar mejor la etiqueta.");
+        setMode("error");
+        return;
+      }
+      setResultado({ clase: result.nombre, confianza: result.confianza });
+      setMode("resultado");
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Error al analizar. Revisá tu conexión.");
+      setMode("error");
+    }
+  }
+
+  async function startCamera() {
+    setMode("camara" as any);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      streamRef.current = stream;
+      setTimeout(() => {
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      }, 100);
+    } catch {
+      setErrorMsg("No pudimos acceder a la cámara. Intentá subir una foto.");
+      setMode("error");
+    }
+  }
 
   // Analiza la imagen con Claude API (vision)
   async function analyzeWithClaude(base64: string, mimeType: string) {
@@ -242,35 +289,67 @@ export default function MedicineScanner() {
 
             {/* Botones */}
             <div className="space-y-3">
-              {/* Cámara directa en mobile */}
-              <Button
-                className="w-full py-4 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-xl shadow-md gap-2 text-base"
-                onClick={() => camRef.current?.click()}
-              >
-                <Camera className="w-5 h-5" />Tomar Foto
-              </Button>
-              <input
-                ref={camRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) processImage(f); }}
-              />
+              {isMobile ? (
+                <>
+                  <Button
+                    className="w-full py-4 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-xl shadow-md gap-2 text-base"
+                    onClick={() => camRef.current?.click()}
+                  >
+                    <Camera className="w-5 h-5" />Tomar Foto
+                  </Button>
+                  <input
+                    ref={camRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) processImage(f); }}
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full py-4 rounded-xl gap-2 text-base border-border/50"
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    <Upload className="w-5 h-5" />Subir de Galería
+                  </Button>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) processImage(f); }}
+                  />
+                </>
+              ) : (
+                <Button
+                  className="w-full py-4 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-xl shadow-md gap-2 text-base"
+                  onClick={startCamera}
+                >
+                  <Camera className="w-5 h-5" />Abrir Cámara
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
+        {/* ══ CAMARA DESKTOP ══ */}
+        {(mode as any) === "camara" && (
+          <div className="max-w-lg mx-auto px-4 py-6 text-center">
+            <h2 className="text-xl font-bold mb-4">Enfocá el medicamento</h2>
+            <div className="relative rounded-2xl overflow-hidden mb-4 border-4 border-primary/20">
+              <video ref={videoRef} autoPlay playsInline className="w-full rounded-2xl" />
+            </div>
+            <div className="space-y-3">
               <Button
-                variant="outline"
-                className="w-full py-4 rounded-xl gap-2 text-base border-border/50"
-                onClick={() => fileRef.current?.click()}
+                className="w-full py-4 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-xl gap-2 text-base"
+                onClick={captureAndAnalyze}
               >
-                <Upload className="w-5 h-5" />Subir Foto de Galería
+                <Scan className="w-5 h-5" />Capturar y Analizar
               </Button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) processImage(f); }}
-              />
+              <Button variant="outline" className="w-full py-3 rounded-xl border-border/50"
+                onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); setMode("inicio"); }}>
+                Cancelar
+              </Button>
             </div>
           </div>
         )}

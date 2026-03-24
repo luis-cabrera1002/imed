@@ -10,6 +10,7 @@ Deno.serve(async (req) => {
         .header { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 32px; text-align: center; }
         .header img { height: 40px; margin-bottom: 12px; }
         .header h1 { color: white; margin: 0; font-size: 22px; font-weight: 700; }
+        .logo { width: 120px; margin: 0 auto 12px; display: block; }
         .header p { color: rgba(255,255,255,0.8); margin: 6px 0 0; font-size: 14px; }
         .body { padding: 32px; }
         .greeting { font-size: 16px; color: #1e293b; margin-bottom: 20px; }
@@ -28,12 +29,12 @@ Deno.serve(async (req) => {
     const doctorHtml = `<!DOCTYPE html><html><head>${emailStyle}</head><body>
       <div class="container">
         <div class="header">
-          <h1>🏥 iMed Guatemala</h1>
+          <img src="https://imedgt.app/imed-logo.png" alt="iMed" style="height:40px;margin:0 auto 12px;display:block;" onerror="this.style.display='none'"><h1 style="margin:0;color:white;font-size:22px;font-weight:700;">iMed Guatemala</h1>
           <p>Nueva cita agendada</p>
         </div>
         <div class="body">
           <span class="badge">✅ Nueva Cita</span>
-          <p class="greeting">Hola <strong>Dr. ${doctor_name || "Doctor"}</strong>,</p>
+          <p class="greeting">Hola <strong>${doctor_name?.startsWith("Dr") ? doctor_name : "Dr. " + doctor_name}</strong>,</p>
           <p style="color:#475569;font-size:15px;">Tienes una nueva cita agendada en tu calendario.</p>
           <div class="card">
             <div class="card-row">
@@ -42,11 +43,11 @@ Deno.serve(async (req) => {
             </div>
             <div class="card-row">
               <span class="card-label">📅 Fecha</span>
-              <span class="card-value">${fecha || "No especificada"}</span>
+              <span class="card-value" style="text-transform:capitalize;">${fecha || "No especificada"}</span>
             </div>
             <div class="card-row">
               <span class="card-label">🕐 Hora</span>
-              <span class="card-value">${hora || "No especificada"}</span>
+              <span class="card-value">${(hora || "").substring(0,5) || "No especificada"}</span>
             </div>
             <div class="card-row">
               <span class="card-label">📋 Motivo</span>
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
     const pacienteHtml = `<!DOCTYPE html><html><head>${emailStyle}</head><body>
       <div class="container">
         <div class="header">
-          <h1>🏥 iMed Guatemala</h1>
+          <img src="https://imedgt.app/imed-logo.png" alt="iMed" style="height:40px;margin:0 auto 12px;display:block;" onerror="this.style.display='none'"><h1 style="margin:0;color:white;font-size:22px;font-weight:700;">iMed Guatemala</h1>
           <p>Tu cita fue confirmada</p>
         </div>
         <div class="body">
@@ -78,11 +79,11 @@ Deno.serve(async (req) => {
             </div>
             <div class="card-row">
               <span class="card-label">📅 Fecha</span>
-              <span class="card-value">${fecha || "No especificada"}</span>
+              <span class="card-value" style="text-transform:capitalize;">${fecha || "No especificada"}</span>
             </div>
             <div class="card-row">
               <span class="card-label">🕐 Hora</span>
-              <span class="card-value">${hora || "No especificada"}</span>
+              <span class="card-value">${(hora || "").substring(0,5) || "No especificada"}</span>
             </div>
             <div class="card-row">
               <span class="card-label">📋 Motivo</span>

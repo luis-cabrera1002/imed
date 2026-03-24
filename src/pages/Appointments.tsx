@@ -84,9 +84,11 @@ export default function Appointments() {
 
       // Enviar email con datos ya cargados
       try {
-        const fechaFmt = fecha ? new Date(fecha + "T12:00:00").toLocaleDateString("es-GT", {
-          weekday: "long", day: "numeric", month: "long", year: "numeric"
-        }) : "";
+        const [y, m, d] = (fecha || "").split("-");
+        const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+        const dias = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
+        const dateObj = new Date(parseInt(y), parseInt(m)-1, parseInt(d));
+        const fechaFmt = fecha ? `${dias[dateObj.getDay()]}, ${d} de ${meses[parseInt(m)-1]} de ${y}` : "";
 
         // Obtener email del paciente desde auth
         const { data: { user: authUser } } = await supabase.auth.getUser();

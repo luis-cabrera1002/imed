@@ -9,7 +9,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
   Search, User, Activity, LogOut, Star, Shield, Bell, Scan,
-  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill
+  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle
 } from "lucide-react";
 
 const ESTADO: Record<string, { label: string; color: string; dot: string }> = {
@@ -34,6 +34,8 @@ export default function PatientDashboard() {
   const [escaneos, setEscaneos]       = useState<any[]>([]);
   const [documentos, setDocumentos]   = useState<any[]>([]);
   const [uploading, setUploading]     = useState(false);
+  const [analizando, setAnalizando]   = useState<string | null>(null);
+  const [analisisIA, setAnalisisIA]   = useState<Record<string, any>>({});
   const [docLoading, setDocLoading]   = useState(false);
 
   useEffect(() => {
@@ -103,6 +105,21 @@ export default function PatientDashboard() {
     await supabase.storage.from("documentos-medicos").remove([doc.storage_path]);
     await supabase.from("documentos_medicos").delete().eq("id", doc.id);
     setDocumentos(prev => prev.filter(d => d.id !== doc.id));
+  }
+
+  async function analizarDocumento(doc: any) {
+    setAnalizando(doc.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-document", {
+        body: { imageUrl: doc.url, tipo: doc.tipo }
+      });
+      if (error) throw error;
+      setAnalisisIA(prev => ({ ...prev, [doc.id]: data }));
+    } catch (err) {
+      console.error("Error analizando:", err);
+      setAnalisisIA(prev => ({ ...prev, [doc.id]: { error: true } }));
+    }
+    setAnalizando(null);
   }
 
   async function loadPerfil(uid: string) {
@@ -657,6 +674,71 @@ export default function PatientDashboard() {
                         </Button>
                       </div>
                     </CardContent>
+                    {/* Botón analizar con IA */}
+                    <div className="px-4 pb-4">
+                      {!analisisIA[doc.id] ? (
+                        <Button
+                          className="w-full bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl gap-2 text-sm"
+                          disabled={analizando === doc.id}
+                          onClick={() => analizarDocumento(doc)}
+                        >
+                          {analizando === doc.id ? (
+                            <><Brain className="w-4 h-4 animate-pulse" />Analizando con IA...</>
+                          ) : (
+                            <><Sparkles className="w-4 h-4" />Analizar con IA</>
+                          )}
+                        </Button>
+                      ) : analisisIA[doc.id].error ? (
+                        <div className="flex items-center gap-2 text-red-500 text-sm p-3 bg-red-50 rounded-xl">
+                          <AlertCircle className="w-4 h-4" />No se pudo analizar. Intentá de nuevo.
+                        </div>
+                      ) : (
+                        <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-4 border border-violet-100 space-y-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-7 h-7 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
+                              <Brain className="w-4 h-4 text-white" />
+                            </div>
+                            <p className="font-bold text-violet-900 text-sm">Análisis IA</p>
+                            <span className="ml-auto text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">⚠️ Orientativo</span>
+                          </div>
+                          {analisisIA[doc.id].resumen && (
+                            <p className="text-sm text-gray-700 leading-relaxed">{analisisIA[doc.id].resumen}</p>
+                          )}
+                          {analisisIA[doc.id].hallazgos?.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-xs font-bold text-violet-700 uppercase tracking-wide">Hallazgos</p>
+                              {analisisIA[doc.id].hallazgos.map((h: string, i: number) => (
+                                <div key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-violet-400 mt-1.5 flex-shrink-0" />
+                                  {h}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {analisisIA[doc.id].alertas?.length > 0 && analisisIA[doc.id].alertas[0] && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                              <p className="text-xs font-bold text-red-700 mb-1">🚨 Alerta</p>
+                              {analisisIA[doc.id].alertas.map((a: string, i: number) => (
+                                <p key={i} className="text-sm text-red-700">{a}</p>
+                              ))}
+                            </div>
+                          )}
+                          {analisisIA[doc.id].recomendacion && (
+                            <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                              <p className="text-xs font-bold text-green-700 mb-1">✅ Recomendación</p>
+                              <p className="text-sm text-green-700">{analisisIA[doc.id].recomendacion}</p>
+                            </div>
+                          )}
+                          {analisisIA[doc.id].requiere_medico && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-2">
+                              <Stethoscope className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                              <p className="text-sm text-blue-700 font-medium">Se recomienda consultar con un médico</p>
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-400 text-center mt-2">Este análisis es orientativo y no reemplaza el diagnóstico médico profesional.</p>
+                        </div>
+                      )}
+                    </div>
                   </Card>
                 ))}
               </div>

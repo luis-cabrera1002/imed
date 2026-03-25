@@ -14,18 +14,36 @@ Deno.serve(async (req) => {
       status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });
 
-    const imgRes = await fetch(imageUrl);
-    const contentType = imgRes.headers.get("content-type") || "";
-    const isPDF = contentType.includes("pdf") || imageUrl.toLowerCase().includes(".pdf");
-
     const prompt = "Sos un asistente medico de apoyo. Analiza este documento medico (" + (tipo || "medico") + ") y responde SOLO con JSON valido sin markdown ni texto extra: {\"resumen\":\"resumen 2-3 oraciones en espanol simple\",\"hallazgos\":[\"hallazgo 1\"],\"alertas\":[\"alerta si hay\"],\"recomendacion\":\"accion sugerida\",\"requiere_medico\":true}. IMPORTANTE: Siempre recomendar validacion medica.";
 
+    const isPDF = imageUrl.toLowerCase().includes(".pdf");
     let messages;
 
     if (isPDF) {
-      const text = await imgRes.text();
-      messages = [{ role: "user", content: prompt + "\n\nContenido del documento:\n" + text.substring(0, 2000) }];
+      // Para PDFs: usar el texto del documento directamente via Anthropic API format
+      const pdfRes = await fetch(imageUrl);
+      const pdfBuffer = await pdfRes.arrayBuffer();
+      const pdfBase64 = encodeBase64(new Uint8Array(pdfBuffer));
+      
+      // Groq no soporta PDF nativamente, usar texto extraido
+      // Convertir bytes a string buscando texto legible
+      const decoder = new TextDecoder("utf-8", { fatal: false });
+      const rawText = decoder.decode(new Uint8Array(pdfBuffer));
+      // Extraer solo caracteres legibles
+      const readableText = rawText.split("").filter(c => {
+        const code = c.charCodeAt(0);
+        return (code >= 32 && code <= 126) || code === 10 || code === 13;
+      }).join("").replace(/\s+/g, " ").trim().substring(0, 2000);
+      
+      console.log("PDF text extracted:", readableText.substring(0, 200));
+      
+      messages = [{
+        role: "user",
+        content: prompt + "\n\nContenido del documento PDF:\n" + readableText
+      }];
     } else {
+      const imgRes = await fetch(imageUrl);
+      const contentType = imgRes.headers.get("content-type") || "image/jpeg";
       const arrayBuf = await imgRes.arrayBuffer();
       const base64 = encodeBase64(new Uint8Array(arrayBuf));
       const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";
@@ -45,10 +63,9 @@ Deno.serve(async (req) => {
     });
 
     const data = await response.json();
-    console.log("Groq response:", JSON.stringify(data).substring(0, 500));
+    console.log("Groq response:", JSON.stringify(data).substring(0, 300));
 
     if (data.error) {
-      console.error("Groq error:", JSON.stringify(data.error));
       return new Response(JSON.stringify({ error: data.error.message }), {
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       });

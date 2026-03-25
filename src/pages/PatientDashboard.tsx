@@ -110,9 +110,11 @@ export default function PatientDashboard() {
   async function analizarDocumento(doc: any) {
     setAnalizando(doc.id);
     try {
+      console.log("Analizando URL:", doc.url);
       const { data, error } = await supabase.functions.invoke("analyze-document", {
         body: { imageUrl: doc.url, tipo: doc.tipo }
       });
+      console.log("Resultado:", data, "Error:", error);
       if (error) throw error;
       setAnalisisIA(prev => ({ ...prev, [doc.id]: data }));
     } catch (err) {

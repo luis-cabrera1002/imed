@@ -21,21 +21,18 @@ Deno.serve(async (req) => {
     if (isPDF) {
       const text = await imgRes.text();
       const cleanText = text.substring(0, 3000);
-      const prompt = "Sos un asistente medico. Analiza este documento (" + (tipo || "medico") + "):\n\n" + cleanText + "\n\nResponde SOLO con JSON valido sin markdown:\n{\"resumen\":\"resumen en 2-3 oraciones simple\",\"hallazgos\":[\"hallazgo 1\"],\"alertas\":[\"alerta si hay\"],\"recomendacion\":\"accion sugerida\",\"requiere_medico\":true}";
+      const prompt = "Sos un asistente medico de apoyo. Analiza este documento medico (" + (tipo || "medico") + "):\n\n" + cleanText + "\n\nResponde SOLO con JSON valido sin markdown ni texto extra:\n{\"resumen\":\"resumen en 2-3 oraciones en espanol simple para el paciente\",\"hallazgos\":[\"hallazgo 1\",\"hallazgo 2\"],\"alertas\":[\"alerta si la hay, o string vacio\"],\"recomendacion\":\"accion sugerida\",\"requiere_medico\":true}\nIMPORTANTE: Siempre recomendar validacion medica profesional.";
       messages = [{ role: "user", content: prompt }];
     } else {
-      const imgBlob = await (await fetch(imageUrl)).arrayBuffer();
-      const bytes = new Uint8Array(imgBlob);
-      let binary = "";
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      const base64 = btoa(binary);
-      const prompt = "Sos un asistente medico. Analiza este documento (" + (tipo || "medico") + ") y responde SOLO con JSON valido sin markdown:\n{\"resumen\":\"resumen en 2-3 oraciones simple\",\"hallazgos\":[\"hallazgo 1\"],\"alertas\":[\"alerta si hay\"],\"recomendacion\":\"accion sugerida\",\"requiere_medico\":true}";
+      const arrayBuf = await imgRes.arrayBuffer();
+      const uint8 = new Uint8Array(arrayBuf);
+      const base64 = btoa(uint8.reduce((acc, byte) => acc + String.fromCharCode(byte), ""));
+      const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";
+      const prompt = "Sos un asistente medico de apoyo. Analiza este documento medico (" + (tipo || "medico") + ") y responde SOLO con JSON valido sin markdown ni texto extra:\n{\"resumen\":\"resumen en 2-3 oraciones en espanol simple para el paciente\",\"hallazgos\":[\"hallazgo 1\",\"hallazgo 2\"],\"alertas\":[\"alerta si la hay\"],\"recomendacion\":\"accion sugerida\",\"requiere_medico\":true}\nIMPORTANTE: Siempre recomendar validacion medica profesional.";
       messages = [{
         role: "user",
         content: [
-          { type: "image_url", image_url: { url: "data:" + (contentType || "image/jpeg") + ";base64," + base64 } },
+          { type: "image_url", image_url: { url: "data:" + mimeType + ";base64," + base64 } },
           { type: "text", text: prompt }
         ]
       }];
@@ -44,18 +41,14 @@ Deno.serve(async (req) => {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + GROQ_API_KEY },
-      body: JSON.stringify({
-        model: "meta-llama/llama-4-scout-17b-16e-instruct",
-        max_tokens: 600,
-        temperature: 0.1,
-        messages
-      })
+      body: JSON.stringify({ model: "meta-llama/llama-4-scout-17b-16e-instruct", max_tokens: 600, temperature: 0.1, messages })
     });
 
     const data = await response.json();
-    console.log("Groq:", JSON.stringify(data));
+    console.log("Groq:", JSON.stringify(data).substring(0, 300));
 
     if (data.error) {
+      console.error("Groq error:", JSON.stringify(data.error));
       return new Response(JSON.stringify({ error: data.error.message }), {
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       });
@@ -65,13 +58,13 @@ Deno.serve(async (req) => {
     const clean = text.replace(/```json/g, "").replace(/```/g, "").trim();
     let result;
     try { result = JSON.parse(clean); }
-    catch { result = { resumen: "No se pudo analizar.", hallazgos: [], alertas: [], recomendacion: "Consulta con tu medico.", requiere_medico: true }; }
+    catch { result = { resumen: "No se pudo analizar el documento.", hallazgos: [], alertas: [], recomendacion: "Consulta con tu medico.", requiere_medico: true }; }
 
     return new Response(JSON.stringify(result), {
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });
   } catch (err) {
-    console.error("Error:", err);
+    console.error("Error:", String(err));
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });

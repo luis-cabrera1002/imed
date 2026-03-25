@@ -1,3 +1,5 @@
+import { encodeBase64 } from "https://deno.land/std@0.208.0/encoding/base64.ts";
+
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY")!;
 
 Deno.serve(async (req) => {
@@ -16,19 +18,17 @@ Deno.serve(async (req) => {
     const contentType = imgRes.headers.get("content-type") || "";
     const isPDF = contentType.includes("pdf") || imageUrl.toLowerCase().includes(".pdf");
 
+    const prompt = "Sos un asistente medico de apoyo. Analiza este documento medico (" + (tipo || "medico") + ") y responde SOLO con JSON valido sin markdown ni texto extra: {\"resumen\":\"resumen 2-3 oraciones en espanol simple\",\"hallazgos\":[\"hallazgo 1\"],\"alertas\":[\"alerta si hay\"],\"recomendacion\":\"accion sugerida\",\"requiere_medico\":true}. IMPORTANTE: Siempre recomendar validacion medica.";
+
     let messages;
 
     if (isPDF) {
       const text = await imgRes.text();
-      const cleanText = text.substring(0, 3000);
-      const prompt = "Sos un asistente medico de apoyo. Analiza este documento medico (" + (tipo || "medico") + "):\n\n" + cleanText + "\n\nResponde SOLO con JSON valido sin markdown ni texto extra:\n{\"resumen\":\"resumen en 2-3 oraciones en espanol simple para el paciente\",\"hallazgos\":[\"hallazgo 1\",\"hallazgo 2\"],\"alertas\":[\"alerta si la hay, o string vacio\"],\"recomendacion\":\"accion sugerida\",\"requiere_medico\":true}\nIMPORTANTE: Siempre recomendar validacion medica profesional.";
-      messages = [{ role: "user", content: prompt }];
+      messages = [{ role: "user", content: prompt + "\n\nContenido del documento:\n" + text.substring(0, 2000) }];
     } else {
       const arrayBuf = await imgRes.arrayBuffer();
-      const uint8 = new Uint8Array(arrayBuf);
-      const base64 = btoa(uint8.reduce((acc, byte) => acc + String.fromCharCode(byte), ""));
+      const base64 = encodeBase64(new Uint8Array(arrayBuf));
       const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";
-      const prompt = "Sos un asistente medico de apoyo. Analiza este documento medico (" + (tipo || "medico") + ") y responde SOLO con JSON valido sin markdown ni texto extra:\n{\"resumen\":\"resumen en 2-3 oraciones en espanol simple para el paciente\",\"hallazgos\":[\"hallazgo 1\",\"hallazgo 2\"],\"alertas\":[\"alerta si la hay\"],\"recomendacion\":\"accion sugerida\",\"requiere_medico\":true}\nIMPORTANTE: Siempre recomendar validacion medica profesional.";
       messages = [{
         role: "user",
         content: [
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     });
 
     const data = await response.json();
-    console.log("Groq:", JSON.stringify(data).substring(0, 300));
+    console.log("Groq response:", JSON.stringify(data).substring(0, 500));
 
     if (data.error) {
       console.error("Groq error:", JSON.stringify(data.error));

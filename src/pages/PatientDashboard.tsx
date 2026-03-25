@@ -9,7 +9,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
   Search, User, Activity, LogOut, Star, Shield, Bell, Scan,
-  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle
+  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw
 } from "lucide-react";
 
 const ESTADO: Record<string, { label: string; color: string; dot: string }> = {
@@ -696,8 +696,17 @@ export default function PatientDashboard() {
                           )}
                         </Button>
                       ) : analisisIA[doc.id].error ? (
-                        <div className="flex items-center gap-2 text-red-500 text-sm p-3 bg-red-50 rounded-xl">
-                          <AlertCircle className="w-4 h-4" />No se pudo analizar. Intentá de nuevo.
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-red-500 text-sm p-3 bg-red-50 rounded-xl">
+                            <AlertCircle className="w-4 h-4" />No se pudo analizar.
+                          </div>
+                          <Button
+                            className="w-full bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl gap-2 text-sm"
+                            disabled={analizando === doc.id}
+                            onClick={() => { setAnalisisIA(prev => { const n = {...prev}; delete n[doc.id]; return n; }); }}
+                          >
+                            <RefreshCw className="w-4 h-4" />Reintentar
+                          </Button>
                         </div>
                       ) : (
                         <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-4 border border-violet-100 space-y-3">

@@ -110,15 +110,8 @@ export default function PatientDashboard() {
   async function analizarDocumento(doc: any) {
     setAnalizando(doc.id);
     try {
-      // Generar URL firmada temporal (60 min) para que Edge Function pueda acceder
-      const { data: signedData, error: signedError } = await supabase.storage
-        .from("documentos-medicos")
-        .createSignedUrl(doc.storage_path, 3600);
-
-      if (signedError) throw signedError;
-
       const { data, error } = await supabase.functions.invoke("analyze-document", {
-        body: { imageUrl: signedData.signedUrl, tipo: doc.tipo }
+        body: { imageUrl: doc.url, tipo: doc.tipo }
       });
       if (error) throw error;
       setAnalisisIA(prev => ({ ...prev, [doc.id]: data }));

@@ -624,7 +624,7 @@ export default function PatientDashboard() {
                     { tipo: "otro", label: "📁 Otro", color: "from-gray-500 to-gray-600" },
                   ].map(({ tipo, label, color }) => (
                     <label key={tipo} className={`cursor-pointer flex items-center justify-center gap-2 p-3 bg-gradient-to-r ${color} text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
-                      <input type="file" accept=".pdf,.jpg,.jpeg,.png,.heic" className="hidden"
+                      <input type="file" accept=".jpg,.jpeg,.png,.heic,.webp" className="hidden"
                         onChange={e => {
                           const f = e.target.files?.[0];
                           if (f) subirDocumento(f, tipo, tipo);
@@ -634,7 +634,7 @@ export default function PatientDashboard() {
                     </label>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground text-center">PDF, JPG, PNG · Máx 10MB</p>
+                <p className="text-xs text-muted-foreground text-center">JPG, PNG · Máx 10MB · Para análisis IA subí foto/captura del documento</p>
               </CardContent>
             </Card>
 

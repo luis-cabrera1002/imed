@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { User, Stethoscope, Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle } from "lucide-react";
+import { User, Stethoscope, Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle, Store } from "lucide-react";
 
 type Mode = "choose" | "login" | "register-patient" | "register-doctor";
 
@@ -31,14 +31,21 @@ const Auth = () => {
     setLoading(false);
   };
 
-  const handleRegister = async (e: React.FormEvent, role: "patient" | "doctor") => {
+  const handleRegister = async (e: React.FormEvent, role: "patient" | "doctor" | "pharmacy") => {
     e.preventDefault(); setLoading(true); setError("");
-    const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, phone, role } } });
+    const redirectUrl = `${window.location.origin}/email-confirmado`;
+    const { error } = await supabase.auth.signUp({
+      email, password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: { full_name: fullName, phone, role }
+      }
+    });
     if (error) {
-      if (error.message.includes("already registered")) { setError("Este correo ya tiene una cuenta. Inicia sesión en su lugar."); }
-      else { setError("Ocurrió un error al crear tu cuenta. Intenta de nuevo."); }
+      if (error.message.includes("already registered")) { setError("Este correo ya tiene una cuenta. Iniciá sesión en su lugar."); }
+      else { setError("Ocurrió un error al crear tu cuenta. Intentá de nuevo."); }
     } else {
-      setSuccess(role === "doctor" ? "¡Cuenta creada! Revisa tu correo para confirmar. Luego podrás completar tu perfil médico." : "¡Cuenta creada! Revisa tu correo para confirmar tu cuenta.");
+      setSuccess("¡Cuenta creada! Revisá tu correo para confirmar tu cuenta y acceder a iMed.");
     }
     setLoading(false);
   };
@@ -81,6 +88,19 @@ const Auth = () => {
                 </div>
               </button>
             </div>
+              <button onClick={() => { resetForm(); setMode("register-pharmacy" as any); }} className="group w-full bg-white border-2 border-gray-200 hover:border-orange-400 rounded-2xl p-6 text-left transition-all duration-200 hover:shadow-lg">
+                <div className="flex items-center gap-5">
+                  <div className="w-16 h-16 bg-orange-100 group-hover:bg-orange-200 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors"><Store className="w-8 h-8 text-orange-600" /></div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold text-gray-900 mb-1">Soy Farmacia</h2>
+                    <p className="text-gray-500 text-sm leading-relaxed">Publicá tu farmacia, gestioná stock y conectá con pacientes.</p>
+                  </div>
+                  <div className="text-orange-400 group-hover:text-orange-600 font-bold text-2xl">→</div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {["Ver demanda en tiempo real","Gestionar inventario","Conectar con pacientes"].map((f) => (<span key={f} className="text-xs bg-orange-50 text-orange-700 px-3 py-1 rounded-full font-medium">✓ {f}</span>))}
+                </div>
+              </button>
             <div className="text-center">
               <p className="text-gray-500 text-sm mb-2">¿Ya tienes cuenta?</p>
               <button onClick={() => { resetForm(); setMode("login"); }} className="text-blue-600 hover:text-blue-800 font-semibold text-base underline underline-offset-2 transition-colors">Iniciar sesión</button>

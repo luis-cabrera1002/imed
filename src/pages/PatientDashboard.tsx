@@ -111,8 +111,10 @@ export default function PatientDashboard() {
     setAnalizando(doc.id);
     try {
       console.log("Analizando URL:", doc.url);
+      const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("analyze-document", {
-        body: { imageUrl: doc.url, tipo: doc.tipo }
+        body: { imageUrl: doc.url, tipo: doc.tipo },
+        headers: { Authorization: "Bearer " + session?.access_token }
       });
       console.log("Resultado:", data, "Error:", error);
       if (error) throw error;

@@ -10,7 +10,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
   Search, User, Activity, LogOut, Star, Shield, Bell, Scan,
-  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw
+  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, Sparkles, AlertCircle, RefreshCw
 } from "lucide-react";
 
 const ESTADO: Record<string, { label: string; color: string; dot: string }> = {

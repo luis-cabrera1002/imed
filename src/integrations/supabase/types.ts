@@ -147,6 +147,39 @@ export type Database = {
         }
         Relationships: []
       }
+      opiniones: {
+        Row: {
+          id: string
+          doctor_id: string
+          paciente_id: string
+          cita_id: string | null
+          rating: number
+          comentario: string | null
+          verificado: boolean
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          doctor_id: string
+          paciente_id: string
+          cita_id?: string | null
+          rating: number
+          comentario?: string | null
+          verificado?: boolean
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          doctor_id?: string
+          paciente_id?: string
+          cita_id?: string | null
+          rating?: number
+          comentario?: string | null
+          verificado?: boolean
+          created_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

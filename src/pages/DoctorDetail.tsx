@@ -46,6 +46,8 @@ export default function DoctorDetail() {
   const [miOpinion, setMiOpinion] = useState({ rating: 0, comentario: "" });
   const [enviandoOpinion, setEnviandoOpinion] = useState(false);
   const [yaOpino, setYaOpino] = useState(false);
+  const [citasCompletadas, setCitasCompletadas] = useState<any[]>([]);
+  const [citaSeleccionada, setCitaSeleccionada] = useState<string>("");
 
   useEffect(() => {
     loadTodo();
@@ -78,6 +80,19 @@ export default function DoctorDetail() {
     if (user) {
       const yaExiste = opinionesConNombre.some(o => o.paciente_id === user.id);
       setYaOpino(yaExiste);
+
+      // Fetch completed appointments with this doctor
+      const { data: citas } = await supabase
+        .from("citas")
+        .select("id, fecha, hora")
+        .eq("paciente_id", user.id)
+        .eq("doctor_id", id)
+        .eq("estado", "completada")
+        .order("fecha", { ascending: false });
+
+      const citasList = citas || [];
+      setCitasCompletadas(citasList);
+      if (citasList.length > 0) setCitaSeleccionada(citasList[0].id);
     }
 
     setLoading(false);
@@ -86,12 +101,15 @@ export default function DoctorDetail() {
   async function enviarOpinion() {
     if (!user) { navigate("/auth"); return; }
     if (miOpinion.rating === 0) return;
+    if (!citaSeleccionada) return;
     setEnviandoOpinion(true);
     const { error } = await supabase.from("opiniones").insert({
       doctor_id: id,
       paciente_id: user.id,
+      cita_id: citaSeleccionada,
       rating: miOpinion.rating,
-      comentario: miOpinion.comentario
+      comentario: miOpinion.comentario,
+      verificado: true
     });
     if (!error) {
       setYaOpino(true);
@@ -224,10 +242,34 @@ export default function DoctorDetail() {
                   )}
 
                   {/* Formulario nueva opinión */}
-                  {user && !yaOpino && (
+                  {user && !yaOpino && citasCompletadas.length > 0 && (
                     <Card>
                       <CardContent className="pt-4">
-                        <h3 className="font-semibold text-gray-800 mb-3">Deja tu opinión</h3>
+                        <div className="flex items-center gap-2 mb-3">
+                          <h3 className="font-semibold text-gray-800">Deja tu opinión</h3>
+                          <span className="flex items-center gap-1 bg-green-50 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-green-200">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                            </svg>
+                            Paciente verificado
+                          </span>
+                        </div>
+                        {citasCompletadas.length > 1 && (
+                          <div className="mb-3">
+                            <label className="text-xs text-gray-500 mb-1 block">Cita a valorar</label>
+                            <select
+                              className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-700"
+                              value={citaSeleccionada}
+                              onChange={e => setCitaSeleccionada(e.target.value)}
+                            >
+                              {citasCompletadas.map(c => (
+                                <option key={c.id} value={c.id}>
+                                  {new Date(c.fecha).toLocaleDateString("es-GT", { day: "numeric", month: "long", year: "numeric" })} — {c.hora}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                         <EstrellasSelector value={miOpinion.rating} onChange={v => setMiOpinion(prev => ({ ...prev, rating: v }))} />
                         <textarea
                           className="w-full border border-gray-300 rounded-lg p-3 mt-3 text-sm focus:outline-none focus:border-blue-700"
@@ -252,6 +294,15 @@ export default function DoctorDetail() {
                           className="bg-blue-900 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-950 transition">
                           Iniciar sesión
                         </button>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {user && !yaOpino && citasCompletadas.length === 0 && (
+                    <Card>
+                      <CardContent className="pt-4 text-center">
+                        <p className="text-gray-500 text-sm mb-1">Solo pacientes con cita completada pueden opinar</p>
+                        <p className="text-xs text-gray-400">Las opiniones en iMed son 100% verificadas</p>
                       </CardContent>
                     </Card>
                   )}
@@ -281,7 +332,17 @@ export default function DoctorDetail() {
                                 {op.paciente_nombre.charAt(0)}
                               </div>
                               <div>
-                                <p className="font-semibold text-gray-800 text-sm">{op.paciente_nombre}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold text-gray-800 text-sm">{op.paciente_nombre}</p>
+                                  {op.verificado && (
+                                    <span className="flex items-center gap-0.5 bg-green-50 text-green-700 text-xs font-medium px-1.5 py-0.5 rounded-full border border-green-200">
+                                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                      </svg>
+                                      Verificado
+                                    </span>
+                                  )}
+                                </div>
                                 <Estrellas rating={op.rating} total={0} />
                               </div>
                             </div>

@@ -8,7 +8,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { User, Stethoscope, Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle, Store } from "lucide-react";
 
-type Mode = "choose" | "login" | "register-patient" | "register-doctor";
+type Mode = "choose" | "login" | "register-patient" | "register-doctor" | "register-pharmacy";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -88,7 +88,7 @@ const Auth = () => {
                 </div>
               </button>
             </div>
-              <button onClick={() => { resetForm(); setMode("register-pharmacy" as any); }} className="group w-full bg-white border-2 border-gray-200 hover:border-orange-400 rounded-2xl p-6 text-left transition-all duration-200 hover:shadow-lg">
+              <button onClick={() => { resetForm(); setMode("register-pharmacy"); }} className="group w-full bg-white border-2 border-gray-200 hover:border-orange-400 rounded-2xl p-6 text-left transition-all duration-200 hover:shadow-lg">
                 <div className="flex items-center gap-5">
                   <div className="w-16 h-16 bg-orange-100 group-hover:bg-orange-200 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors"><Store className="w-8 h-8 text-orange-600" /></div>
                   <div className="flex-1">
@@ -239,6 +239,57 @@ const Auth = () => {
                   </form>
                 )}
                 {!success && (<div className="mt-5 text-center border-t border-gray-100 pt-5"><p className="text-gray-500 text-sm mb-2">¿Ya tienes cuenta?</p><button onClick={() => { resetForm(); setMode("login"); }} className="text-green-600 hover:text-green-800 font-semibold underline underline-offset-2 text-sm">Iniciar sesión</button></div>)}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      <Footer /></div>
+    );
+  }
+
+  if (mode === "register-pharmacy") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white"><Header />
+        <div className="flex flex-col items-center justify-center px-4 py-16">
+          <div className="w-full max-w-md">
+            <button onClick={() => { resetForm(); setMode("choose"); }} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 font-medium text-sm"><ArrowLeft className="w-4 h-4" /> Atrás</button>
+            <Card className="shadow-xl border-0 rounded-3xl overflow-hidden">
+              <div className="bg-gradient-to-r from-orange-600 to-orange-400 px-8 py-7 text-center">
+                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3"><Store className="w-7 h-7 text-white" /></div>
+                <h2 className="text-2xl font-bold text-white">Registro Farmacia</h2>
+                <p className="text-orange-100 text-sm mt-1">Conectá tu farmacia con pacientes</p>
+              </div>
+              <CardContent className="p-8">
+                <div className="bg-orange-50 rounded-2xl p-4 mb-6 border border-orange-100">
+                  <p className="text-orange-800 text-xs font-bold uppercase tracking-wide mb-2">¿Qué obtenés al registrarte?</p>
+                  <ul className="space-y-1">
+                    {["Dashboard con demanda en tiempo real","Analytics de medicamentos buscados","Gestión de inventario y pedidos","Conectá con miles de pacientes"].map((b) => (<li key={b} className="flex items-center gap-2 text-orange-700 text-sm"><CheckCircle className="w-4 h-4 flex-shrink-0 text-orange-500" />{b}</li>))}
+                  </ul>
+                </div>
+                {success ? (
+                  <div className="text-center py-6">
+                    <CheckCircle className="w-16 h-16 text-orange-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">¡Registro exitoso!</h3>
+                    <p className="text-gray-600 text-sm mb-6 leading-relaxed">{success}</p>
+                    <Button onClick={() => navigate("/")} className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 py-3 rounded-xl">Ir al inicio</Button>
+                  </div>
+                ) : (
+                  <form onSubmit={(e) => handleRegister(e, "pharmacy")} className="space-y-5">
+                    <div><label className="block text-sm font-semibold text-gray-700 mb-2">Nombre de la farmacia</label><Input type="text" placeholder="Farmacia San José" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="h-12 rounded-xl border-gray-200 focus:border-orange-400 text-base" /></div>
+                    <div><label className="block text-sm font-semibold text-gray-700 mb-2">Teléfono</label><Input type="tel" placeholder="2222-3333" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12 rounded-xl border-gray-200 focus:border-orange-400 text-base" /></div>
+                    <div><label className="block text-sm font-semibold text-gray-700 mb-2">Correo electrónico</label><Input type="email" placeholder="farmacia@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-12 rounded-xl border-gray-200 focus:border-orange-400 text-base" /></div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Contraseña</label>
+                      <div className="relative">
+                        <Input type={showPassword ? "text" : "password"} placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="h-12 rounded-xl border-gray-200 focus:border-orange-400 text-base pr-12" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
+                      </div>
+                    </div>
+                    {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-700 text-sm font-medium">{error}</p></div>}
+                    <Button type="submit" disabled={loading} className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base rounded-xl shadow-md">{loading ? "Creando cuenta..." : "Crear mi cuenta de Farmacia"}</Button>
+                    {!success && (<div className="mt-5 text-center border-t border-gray-100 pt-5"><p className="text-gray-500 text-sm mb-2">¿Ya tenés cuenta?</p><button onClick={() => { resetForm(); setMode("login"); }} className="text-orange-600 hover:text-orange-800 font-semibold underline underline-offset-2 text-sm">Iniciar sesión</button></div>)}
+                  </form>
+                )}
               </CardContent>
             </Card>
           </div>

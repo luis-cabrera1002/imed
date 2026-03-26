@@ -5,6 +5,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import EmailConfirmado from "@/pages/EmailConfirmado";
+import ModoViajero from "@/pages/ModoViajero";
+import Onboarding from "@/pages/Onboarding";
+import RecordatorioMedicamentos from "@/pages/RecordatorioMedicamentos";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ViewProvider } from "@/contexts/ViewContext";
 import Index from "./pages/Index";
@@ -65,6 +68,9 @@ const App = () => (
               <Route path="/escaner-medicamentos" element={<MedicineScanner />} />
               <Route path="/patient-dashboard" element={<PatientDashboard />} />
               <Route path="/email-confirmado" element={<EmailConfirmado />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/modo-viajero" element={<ModoViajero />} />
+              <Route path="/recordatorio-medicamentos" element={<RecordatorioMedicamentos />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ViewProvider>

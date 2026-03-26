@@ -15,7 +15,7 @@ export default function EmailConfirmado() {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          navigate("/patient-dashboard");
+          navigate("/onboarding");
           return 0;
         }
         return prev - 1;

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import EmergencyButton from "@/components/EmergencyButton";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
@@ -370,6 +371,8 @@ export default function PatientDashboard() {
                       { label: "Agendar Cita",   sub: "Flujo rápido",       icon: Calendar,  grad: "from-purple-500 to-purple-600",   path: "/citas"        },
                       { label: "Red BAM",         sub: "Seguro médico",      icon: Shield,    grad: "from-green-500 to-emerald-500",   path: "/medicos-bam"  },
                       { label: "Escáner Med.",    sub: "Identificar med.",   icon: Scan,      grad: "from-orange-500 to-red-500",       path: "/escaner-medicamentos" },
+                      { label: "Modo Viajero",    sub: "Med. en el mundo",   icon: Globe,     grad: "from-blue-500 to-indigo-600",      path: "/modo-viajero" },
+                      { label: "Recordatorios",   sub: "Tomar a tiempo",     icon: Bell,      grad: "from-green-500 to-teal-500",       path: "/recordatorio-medicamentos" },
                     ].map(({ label, sub, icon: Icon, grad, path }) => (
                       <button key={label} onClick={() => navigate(path)}
                         className="group flex flex-col items-start p-3 bg-background hover:bg-muted/40 rounded-xl border border-border/50 hover:border-primary/20 transition-all text-left">

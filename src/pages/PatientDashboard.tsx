@@ -806,6 +806,7 @@ export default function PatientDashboard() {
         )}
 
       </div>
+      <EmergencyButton />
     </div>
   );
 }

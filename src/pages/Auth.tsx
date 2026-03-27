@@ -8,7 +8,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { User, Stethoscope, Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle, Store } from "lucide-react";
 
-type Mode = "choose" | "login" | "register-patient" | "register-doctor" | "register-pharmacy";
+type Mode = "choose" | "login" | "register-patient" | "register-doctor" | "register-pharmacy" | "forgot-password";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -28,6 +28,16 @@ const Auth = () => {
     e.preventDefault(); setLoading(true); setError("");
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { setError("Correo o contraseña incorrectos. Intenta de nuevo."); } else { navigate("/"); }
+    setLoading(false);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault(); setLoading(true); setError("");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    if (error) { setError("No se pudo enviar el correo. Verificá el email ingresado."); }
+    else { setSuccess("Te enviamos un enlace para restablecer tu contraseña. Revisá tu correo."); }
     setLoading(false);
   };
 
@@ -138,6 +148,9 @@ const Auth = () => {
                   </div>
                   {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-700 text-sm font-medium">{error}</p></div>}
                   <Button type="submit" disabled={loading} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl shadow-md">{loading ? "Ingresando..." : "Iniciar Sesión"}</Button>
+                  <div className="text-center">
+                    <button type="button" onClick={() => { resetForm(); setMode("forgot-password"); }} className="text-sm text-gray-400 hover:text-blue-600 transition-colors underline underline-offset-2">¿Olvidaste tu contraseña?</button>
+                  </div>
                 </form>
                 <div className="mt-6 text-center border-t border-gray-100 pt-5">
                   <p className="text-gray-500 text-sm mb-2">¿No tienes cuenta?</p>
@@ -288,6 +301,45 @@ const Auth = () => {
                     {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-700 text-sm font-medium">{error}</p></div>}
                     <Button type="submit" disabled={loading} className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base rounded-xl shadow-md">{loading ? "Creando cuenta..." : "Crear mi cuenta de Farmacia"}</Button>
                     {!success && (<div className="mt-5 text-center border-t border-gray-100 pt-5"><p className="text-gray-500 text-sm mb-2">¿Ya tenés cuenta?</p><button onClick={() => { resetForm(); setMode("login"); }} className="text-orange-600 hover:text-orange-800 font-semibold underline underline-offset-2 text-sm">Iniciar sesión</button></div>)}
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      <Footer /></div>
+    );
+  }
+
+  if (mode === "forgot-password") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white"><Header />
+        <div className="flex flex-col items-center justify-center px-4 py-16">
+          <div className="w-full max-w-md">
+            <button onClick={() => { resetForm(); setMode("login"); }} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 font-medium text-sm"><ArrowLeft className="w-4 h-4" /> Volver al login</button>
+            <Card className="shadow-xl border-0 rounded-3xl overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-700 to-blue-500 px-8 py-7 text-center">
+                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3"><Lock className="w-7 h-7 text-white" /></div>
+                <h2 className="text-2xl font-bold text-white">Restablecer contraseña</h2>
+                <p className="text-blue-100 text-sm mt-1">Te enviaremos un enlace por correo</p>
+              </div>
+              <CardContent className="p-8">
+                {success ? (
+                  <div className="text-center py-6">
+                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">¡Correo enviado!</h3>
+                    <p className="text-gray-600 text-sm mb-6 leading-relaxed">{success}</p>
+                    <Button onClick={() => { resetForm(); setMode("login"); }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-xl">Volver al login</Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleForgotPassword} className="space-y-5">
+                    <p className="text-gray-500 text-sm">Ingresá el correo asociado a tu cuenta y te enviaremos un enlace para crear una nueva contraseña.</p>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Correo electrónico</label>
+                      <Input type="email" placeholder="tucorreo@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-12 rounded-xl border-gray-200 focus:border-blue-400 text-base" />
+                    </div>
+                    {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-700 text-sm font-medium">{error}</p></div>}
+                    <Button type="submit" disabled={loading} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl shadow-md">{loading ? "Enviando..." : "Enviar enlace de recuperación"}</Button>
                   </form>
                 )}
               </CardContent>

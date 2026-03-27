@@ -79,11 +79,15 @@ export default function InvestorsDashboard() {
   const [authorized, setAuthorized] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchMetrics = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
+    setFetchError(null);
     const { data, error } = await supabase.rpc("get_investor_metrics");
-    if (!error && data) {
+    if (error) {
+      setFetchError(error.message ?? "Error al cargar métricas. Verificá que la función SQL esté instalada en Supabase.");
+    } else if (data) {
       setMetrics(data as Metrics);
       setLastUpdated(new Date());
     }
@@ -178,7 +182,13 @@ export default function InvestorsDashboard() {
             </div>
           </div>
 
-          {lastUpdated && (
+          {fetchError && (
+            <div className="mt-3 bg-red-500/20 border border-red-500/40 rounded-xl px-4 py-3">
+              <p className="text-red-300 text-xs font-medium">⚠ {fetchError}</p>
+              <p className="text-red-400/70 text-xs mt-1">Corré la migración <code>20260326000001_investor_metrics_function.sql</code> en el SQL Editor de Supabase.</p>
+            </div>
+          )}
+          {lastUpdated && !fetchError && (
             <p className="mt-3 text-xs text-white/30">
               Última actualización: {updatedTime} · Auto-refresh cada 30s
             </p>

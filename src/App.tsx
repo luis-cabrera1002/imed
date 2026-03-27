@@ -33,6 +33,8 @@ import PharmacyDashboard from "./pages/PharmacyDashboard";
 import PatientDashboard from "./pages/PatientDashboard";
 import MedicineScanner from "./pages/MedicineScanner";
 import InvestorsDashboard from "./pages/InvestorsDashboard";
+import MapaFarmacias from "./pages/MapaFarmacias";
+import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -73,6 +75,8 @@ const App = () => (
               <Route path="/modo-viajero" element={<ModoViajero />} />
               <Route path="/recordatorio-medicamentos" element={<RecordatorioMedicamentos />} />
               <Route path="/investors" element={<InvestorsDashboard />} />
+              <Route path="/mapa-farmacias" element={<MapaFarmacias />} />
+              <Route path="/chat" element={<Chat />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ViewProvider>

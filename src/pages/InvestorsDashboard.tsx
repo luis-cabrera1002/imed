@@ -128,6 +128,30 @@ export default function InvestorsDashboard() {
     );
   }
 
+  // Si hay error y aún no hay datos, mostrar pantalla de error completa
+  if (fetchError && !metrics) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <div className="text-5xl mb-4">⚠️</div>
+          <h2 className="text-white text-xl font-bold mb-2">Error al cargar métricas</h2>
+          <p className="text-gray-400 text-sm mb-4">{fetchError}</p>
+          <div className="bg-gray-800 rounded-xl p-4 text-left mb-6">
+            <p className="text-gray-300 text-xs font-semibold mb-1">Solución:</p>
+            <p className="text-gray-400 text-xs">Corré la migración <code className="text-blue-300">20260326000001_investor_metrics_function.sql</code> en el SQL Editor de Supabase para instalar la función <code className="text-blue-300">get_investor_metrics()</code>.</p>
+          </div>
+          <button
+            onClick={() => fetchMetrics(true)}
+            disabled={refreshing}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition disabled:opacity-50"
+          >
+            {refreshing ? "Reintentando..." : "Reintentar"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const today = new Date().toLocaleDateString("es-GT", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });

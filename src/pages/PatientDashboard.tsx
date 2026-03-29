@@ -20,6 +20,8 @@ const ESTADO: Record<string, { label: string; color: string; dot: string }> = {
   cancelada:  { label: "Cancelada",  color: "bg-red-100 text-red-700 border-red-200",            dot: "bg-red-400"    },
 };
 
+const INVESTOR_EMAILS = ["totessi.10@gmail.com", "luisan.cabrera@gmail.com"];
+
 const TABS = ["Inicio", "Mis Citas", "Mis Recetas", "Mis Escaneos", "Mis Documentos", "Mi Perfil"] as const;
 type Tab = typeof TABS[number];
 
@@ -274,6 +276,36 @@ export default function PatientDashboard() {
                 </Card>
               ))}
             </div>
+
+            {/* Card exclusivo inversores */}
+            {INVESTOR_EMAILS.includes(user?.email ?? "") && (
+              <button
+                onClick={() => navigate("/investors")}
+                className="w-full text-left relative overflow-hidden rounded-2xl p-5 bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-900 shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all duration-200"
+              >
+                <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-white opacity-5" />
+                <div className="absolute -bottom-6 right-16 w-32 h-32 rounded-full bg-white opacity-5" />
+                <div className="relative flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-white font-black text-lg tracking-tight">iMed</span>
+                      <span className="text-blue-300 font-light text-lg">Investors</span>
+                      <span className="flex items-center gap-1 bg-red-500/20 border border-red-500/40 rounded-full px-2 py-0.5 ml-1">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+                        </span>
+                        <span className="text-red-300 font-bold text-xs tracking-widest">EN VIVO</span>
+                      </span>
+                    </div>
+                    <p className="text-blue-200/70 text-sm">Métricas en tiempo real de la plataforma</p>
+                  </div>
+                  <div className="flex-shrink-0 w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white text-lg">
+                    →
+                  </div>
+                </div>
+              </button>
+            )}
 
             {/* Próxima cita + Accesos rápidos */}
             <div className="grid md:grid-cols-2 gap-6">

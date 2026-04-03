@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { 
-  Search, Menu, User, LogOut, ChevronDown, Scan, 
-  Building2, Stethoscope, Calendar, Pill, FileText, 
-  Heart, Home, Clock, LayoutDashboard, Store, Shield
+import {
+  Search, Menu, User, LogOut, ChevronDown, Scan,
+  Building2, Stethoscope, Calendar, Pill, FileText,
+  Heart, Home, Clock, LayoutDashboard, Store, Shield, Globe, MessageCircle, MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -68,6 +68,9 @@ const Header = () => {
     { to: "/mis-recetas", label: "Mis Recetas", icon: FileText },
     { to: "/escaner-medicamentos", label: "Escáner Med.", icon: Scan },
     { to: "/mi-seguro", label: "Mi Seguro", icon: Shield },
+    { to: "/modo-viajero", label: "Modo Viajero", icon: Globe },
+    { to: "/chat", label: "Chat Médico", icon: MessageCircle },
+    { to: "/mapa-farmacias", label: "Mapa Farmacias", icon: MapPin },
   ];
   
   return (

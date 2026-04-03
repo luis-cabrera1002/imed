@@ -10,7 +10,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
   Search, User, Activity, LogOut, Star, Shield, Bell, Scan,
-  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, Sparkles, AlertCircle, RefreshCw
+  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, MessageCircle, Store
 } from "lucide-react";
 
 const ESTADO: Record<string, { label: string; color: string; dot: string }> = {
@@ -405,6 +405,8 @@ export default function PatientDashboard() {
                       { label: "Escáner Med.",    sub: "Identificar med.",   icon: Scan,      grad: "from-orange-500 to-red-500",       path: "/escaner-medicamentos" },
                       { label: "Modo Viajero",    sub: "Med. en el mundo",   icon: Globe,     grad: "from-blue-500 to-indigo-600",      path: "/modo-viajero" },
                       { label: "Recordatorios",   sub: "Tomar a tiempo",     icon: Bell,      grad: "from-green-500 to-teal-500",       path: "/recordatorio-medicamentos" },
+                      { label: "Chat Médico",     sub: "Con tu doctor",      icon: MessageCircle, grad: "from-blue-500 to-cyan-500",    path: "/chat" },
+                      { label: "Mapa Farmacias",  sub: "Stock en tiempo real", icon: Store,    grad: "from-teal-500 to-emerald-600",     path: "/mapa-farmacias" },
                     ].map(({ label, sub, icon: Icon, grad, path }) => (
                       <button key={label} onClick={() => navigate(path)}
                         className="group flex flex-col items-start p-3 bg-background hover:bg-muted/40 rounded-xl border border-border/50 hover:border-primary/20 transition-all text-left">

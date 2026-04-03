@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Scan } from "lucide-react";
+import { Scan, Globe, FileText, Brain } from "lucide-react";
 import { Search, MapPin, Calendar, Stethoscope, Activity, Heart, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -202,6 +202,69 @@ const Index = () => {
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-full" preserveAspectRatio="none">
               <path fill="hsl(var(--background))" d="M0,60L80,55C160,50,320,40,480,45C640,50,800,70,960,75C1120,80,1280,70,1360,65L1440,60L1440,120L0,120Z" />
             </svg>
+          </div>
+        </section>
+
+        {/* Funcionalidades IA */}
+        <section className="py-16">
+          <div className="container px-4 mx-auto sm:px-6 lg:px-8">
+            <div className="text-center mb-10">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold mb-3">
+                <Brain className="w-3.5 h-3.5" />
+                Impulsado por IA
+              </span>
+              <h2 className="text-2xl md:text-3xl font-bold font-display text-foreground">Funcionalidades con Inteligencia Artificial</h2>
+              <p className="text-muted-foreground mt-2 max-w-xl mx-auto">Herramientas avanzadas para gestionar tu salud de forma inteligente</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {[
+                {
+                  icon: Scan,
+                  label: "Escáner de Medicamentos",
+                  desc: "Fotografiá cualquier medicamento y obtené información detallada al instante con IA.",
+                  badge: "NUEVO",
+                  badgeColor: "bg-orange-100 text-orange-700",
+                  grad: "from-orange-500 to-red-500",
+                  path: "/escaner-medicamentos",
+                },
+                {
+                  icon: FileText,
+                  label: "Análisis de Documentos",
+                  desc: "Subí tus resultados médicos y recibí un resumen comprensible generado por IA.",
+                  badge: "IA",
+                  badgeColor: "bg-purple-100 text-purple-700",
+                  grad: "from-purple-500 to-violet-600",
+                  path: "/patient-dashboard",
+                },
+                {
+                  icon: Globe,
+                  label: "Modo Viajero",
+                  desc: "Encontrá equivalentes de tus medicamentos en más de 40 países al viajar.",
+                  badge: "GLOBAL",
+                  badgeColor: "bg-blue-100 text-blue-700",
+                  grad: "from-blue-500 to-indigo-600",
+                  path: "/modo-viajero",
+                },
+              ].map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => window.location.href = item.path}
+                  className="group text-left bg-white border border-border/50 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200"
+                >
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.grad} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm`}>
+                    <item.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-bold text-foreground font-display">{item.label}</h3>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.badgeColor}`}>{item.badge}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                  <div className="flex items-center gap-1 mt-4 text-primary text-sm font-semibold">
+                    Probar ahora <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 

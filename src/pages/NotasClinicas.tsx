@@ -447,7 +447,7 @@ export default function NotasClinicas() {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // iMed NOA — Voice Assistant
+  // AliMed — Voice Assistant
   // ══════════════════════════════════════════════════════════════════════════
   type NoaState = "idle" | "recording" | "transcribing" | "analyzing" | "done";
 
@@ -505,9 +505,14 @@ export default function NotasClinicas() {
         const alpha = 0.3 + ratio * 0.7;
         ctx!.fillStyle = `rgba(147, 51, 234, ${alpha})`;
         const x = i * (bw + 1);
-        ctx!.beginPath();
-        ctx!.roundRect(x, canvas!.height - bh, bw, bh, 3);
-        ctx!.fill();
+        const y = canvas!.height - bh;
+        if (typeof (ctx as any).roundRect === "function") {
+          ctx!.beginPath();
+          (ctx as any).roundRect(x, y, bw, bh, 3);
+          ctx!.fill();
+        } else {
+          ctx!.fillRect(x, y, bw, bh);
+        }
       }
     }
     frame();
@@ -545,17 +550,35 @@ export default function NotasClinicas() {
 
   async function startRecording() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 },
+      });
       streamRef.current = stream;
 
-      // Web Audio waveform
-      const audioCtx = new AudioContext();
+      // Web Audio waveform — webkitAudioContext for iOS Safari
+      const AudioCtxClass = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+      const audioCtx = new AudioCtxClass();
       const analyser = audioCtx.createAnalyser();
       const src = audioCtx.createMediaStreamSource(stream);
       src.connect(analyser);
       analyserRef.current = analyser;
 
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      // Detect supported MIME type — iOS Safari only supports audio/mp4
+      const supportedMime = (() => {
+        const candidates = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/ogg;codecs=opus",
+          "audio/mp4",
+        ];
+        for (const t of candidates) {
+          if (MediaRecorder.isTypeSupported(t)) return t;
+        }
+        return "";
+      })();
+
+      const recorderOptions = supportedMime ? { mimeType: supportedMime } : {};
+      const recorder = new MediaRecorder(stream, recorderOptions);
       recorderRef.current = recorder;
       chunksRef.current = [];
 
@@ -630,10 +653,10 @@ export default function NotasClinicas() {
       : transcriptRef.current;
     const notasExtra = [
       form.notas_privadas,
-      noaResult.resumen_expediente ? `\n[NOA Resumen] ${noaResult.resumen_expediente}` : "",
-      noaResult.instrucciones_paciente ? `[NOA Instrucciones] ${noaResult.instrucciones_paciente}` : "",
-      noaResult.recordatorios_sugeridos ? `[NOA Recordatorios] ${noaResult.recordatorios_sugeridos}` : "",
-      `\n[NOA Transcripción] ${transcriptSnippet}`,
+      noaResult.resumen_expediente ? `\n[AliMed Resumen] ${noaResult.resumen_expediente}` : "",
+      noaResult.instrucciones_paciente ? `[AliMed Instrucciones] ${noaResult.instrucciones_paciente}` : "",
+      noaResult.recordatorios_sugeridos ? `[AliMed Recordatorios] ${noaResult.recordatorios_sugeridos}` : "",
+      `\n[AliMed Transcripción] ${transcriptSnippet}`,
     ].filter(Boolean).join("\n").trim();
 
     setForm(prev => ({
@@ -650,7 +673,7 @@ export default function NotasClinicas() {
     setAutosaveStatus("unsaved");
     setNoaOpen(false);
     setNoaState("idle");
-    toast({ title: "✨ Nota completada con NOA", description: "Los campos fueron llenados automáticamente." });
+    toast({ title: "✨ Nota completada con AliMed", description: "Los campos fueron llenados automáticamente." });
   }
 
   function fmtTime(s: number) {
@@ -1186,36 +1209,39 @@ export default function NotasClinicas() {
         </div>
       </div>
 
-      {/* ── NOA Floating Button ── */}
-      {activeNota && (
+      {/* ── AliMed Floating Button ── */}
+      {notaActiva && (
         <button
           onClick={noaOpen ? closeNoa : openNoa}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 no-print"
+          className="fixed bottom-6 right-4 z-50 h-12 px-4 rounded-full shadow-xl flex items-center gap-2 transition-all duration-200 no-print text-white text-sm font-semibold"
           style={{
             background: noaState === "recording"
               ? "linear-gradient(135deg,#ef4444,#dc2626)"
               : "linear-gradient(135deg,#6366f1,#4f46e5)",
           }}
-          title="iMed NOA — Asistente de Voz"
+          title="AliMed — Asistente de Consulta"
         >
           {noaState === "recording" ? (
-            <MicOff className="w-6 h-6 text-white" />
+            <MicOff className="w-5 h-5" />
           ) : noaState === "transcribing" || noaState === "analyzing" ? (
-            <Radio className="w-6 h-6 text-white animate-pulse" />
+            <Radio className="w-5 h-5 animate-pulse" />
           ) : (
-            <Mic className="w-6 h-6 text-white" />
+            <Mic className="w-5 h-5" />
           )}
+          <span>
+            {noaState === "recording" ? "Detener" : noaState === "transcribing" ? "Transcribiendo..." : noaState === "analyzing" ? "Analizando..." : "🎙️ AliMed"}
+          </span>
         </button>
       )}
 
-      {/* ── NOA Modal ── */}
+      {/* ── AliMed Modal ── */}
       {noaOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 no-print">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 no-print">
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeNoa} />
 
           {/* Panel */}
-          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+          <div className="relative w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto">
             {/* Header */}
             <div
               className="flex items-center justify-between px-5 py-4"
@@ -1226,8 +1252,8 @@ export default function NotasClinicas() {
                   <Mic className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm">iMed NOA</p>
-                  <p className="text-indigo-200 text-xs">Asistente de Voz con IA</p>
+                  <p className="text-white font-bold text-sm">AliMed</p>
+                  <p className="text-indigo-200 text-xs">Asistente de Consulta</p>
                 </div>
               </div>
               <button onClick={closeNoa} className="text-white/70 hover:text-white">
@@ -1245,7 +1271,7 @@ export default function NotasClinicas() {
                   <div>
                     <p className="font-semibold text-gray-800">Dictá la consulta</p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Hablá con normalidad durante la consulta. NOA transcribirá y llenará el formulario automáticamente.
+                      Hablá con naturalidad durante la consulta. AliMed transcribirá y llenará el formulario automáticamente.
                     </p>
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-xs text-gray-500">

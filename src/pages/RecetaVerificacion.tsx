@@ -64,7 +64,7 @@ export default function RecetaVerificacion() {
           <XCircle className="w-16 h-16 text-red-400 mx-auto mb-4"/>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Receta no válida</h1>
           <p className="text-gray-500 mb-6">El código QR escaneado no corresponde a ninguna receta en el sistema o ya fue usada.</p>
-          <Button onClick={() => navigate(-1)} variant="outline" className="gap-2"><ArrowLeft className="w-4 h-4"/> Volver</Button>
+          <Button onClick={() => navigate("/")} variant="outline" className="gap-2"><ArrowLeft className="w-4 h-4"/> Volver</Button>
         </div>
       </div>
     );
@@ -78,7 +78,7 @@ export default function RecetaVerificacion() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="max-w-lg mx-auto px-4 py-8">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-400 hover:text-gray-600 mb-6">
+        <button onClick={() => navigate("/")} className="flex items-center gap-2 text-gray-400 hover:text-gray-600 mb-6">
           <ArrowLeft className="w-4 h-4"/> Volver
         </button>
 

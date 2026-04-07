@@ -11,7 +11,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
   Search, User, Activity, LogOut, Star, Shield, Bell, Scan,
-  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, MessageCircle, Store, ClipboardList
+  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, MessageCircle, Store, ClipboardList, Trophy, CheckCircle2, ArrowRight
 } from "lucide-react";
 
 const ESTADO: Record<string, { label: string; color: string; dot: string }> = {
@@ -41,6 +41,8 @@ export default function PatientDashboard() {
   const [analizando, setAnalizando]   = useState<string | null>(null);
   const [analisisIA, setAnalisisIA]   = useState<Record<string, any>>({});
   const [docLoading, setDocLoading]   = useState(false);
+  const [expediente, setExpediente]   = useState<any>(null);
+  const [recordatoriosCount, setRecordatoriosCount] = useState(0);
 
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
@@ -49,7 +51,7 @@ export default function PatientDashboard() {
 
   async function loadData(uid: string) {
     setLoading(true);
-    await Promise.all([loadPerfil(uid), loadCitas(uid), loadRecetas(uid), loadEscaneos(uid), loadDocumentos(uid)]);
+    await Promise.all([loadPerfil(uid), loadCitas(uid), loadRecetas(uid), loadEscaneos(uid), loadDocumentos(uid), loadExpediente(uid), loadRecordatorios(uid)]);
     setLoading(false);
   }
 
@@ -128,6 +130,16 @@ export default function PatientDashboard() {
     setAnalizando(null);
   }
 
+  async function loadExpediente(uid: string) {
+    const { data } = await supabase.from("expediente_medico").select("grupo_sanguineo").eq("user_id", uid).single();
+    if (data) setExpediente(data);
+  }
+
+  async function loadRecordatorios(uid: string) {
+    const { count } = await supabase.from("medication_reminders").select("id", { count: "exact", head: true }).eq("user_id", uid).eq("activo", true);
+    setRecordatoriosCount(count ?? 0);
+  }
+
   async function loadPerfil(uid: string) {
     const { data } = await supabase.from("profiles").select("*").eq("user_id", uid).single();
     if (data) setPerfil(data);
@@ -168,6 +180,21 @@ export default function PatientDashboard() {
   const citasPasadas   = citas.filter(c => c.fecha < today   || c.estado === "completada");
   const citasPendientes = citas.filter(c => c.estado === "pendiente");
   const nombre = perfil?.full_name?.split(" ")[0] || "Paciente";
+
+  // iMed Health Score
+  const scoreItems = [
+    { label: "Expediente completo",         pts: 20, done: !!(expediente?.grupo_sanguineo),                  cta: "/expediente",                    ctaLabel: "Completar expediente" },
+    { label: "Cita completada",             pts: 20, done: citas.some(c => c.estado === "completada"),       cta: "/citas",                         ctaLabel: "Agendar cita" },
+    { label: "Documento médico subido",     pts: 15, done: documentos.length > 0,                            cta: "/patient-dashboard",             ctaLabel: "Subir documento" },
+    { label: "Recordatorios activos",       pts: 15, done: recordatoriosCount > 0,                           cta: "/recordatorio-medicamentos",     ctaLabel: "Configurar recordatorios" },
+    { label: "Notificaciones activadas",    pts: 15, done: isSubscribed,                                     cta: undefined,                        ctaLabel: "Activar en dashboard" },
+    { label: "Perfil completo con teléfono",pts: 15, done: !!(perfil?.phone),                               cta: "/patient-dashboard",             ctaLabel: "Completar perfil" },
+  ];
+  const healthScore = scoreItems.reduce((sum, i) => sum + (i.done ? i.pts : 0), 0);
+  const scoreBadge = healthScore <= 40 ? { label: "Comenzando 🌱", color: "text-gray-600 bg-gray-100" }
+    : healthScore <= 70 ? { label: "Activo 💪",    color: "text-blue-700 bg-blue-100" }
+    : healthScore <= 90 ? { label: "Saludable ⭐",  color: "text-green-700 bg-green-100" }
+    :                     { label: "iMed Pro 🏆",   color: "text-yellow-700 bg-yellow-100" };
 
   const fmtFecha = (f: string) => {
     if (!f) return "";
@@ -275,6 +302,55 @@ export default function PatientDashboard() {
                 </Card>
               ))}
             </div>
+
+            {/* iMed Health Score */}
+            <Card className="border border-border/50 shadow-sm overflow-hidden">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-yellow-500" />
+                    <h3 className="font-bold text-foreground">iMed Health Score</h3>
+                  </div>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${scoreBadge.color}`}>{scoreBadge.label}</span>
+                </div>
+                <div className="flex items-end gap-3 mb-3">
+                  <span className="text-5xl font-black text-foreground leading-none">{healthScore}</span>
+                  <span className="text-muted-foreground text-sm mb-1">/ 100</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5 mb-4 overflow-hidden">
+                  <div
+                    className={`h-2.5 rounded-full transition-all duration-700 ${
+                      healthScore >= 91 ? "bg-yellow-400" :
+                      healthScore >= 71 ? "bg-green-500" :
+                      healthScore >= 41 ? "bg-blue-500" : "bg-gray-400"
+                    }`}
+                    style={{ width: `${healthScore}%` }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  {scoreItems.filter(i => !i.done).slice(0, 3).map(item => (
+                    <div key={item.label} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+                        <span className="text-xs text-muted-foreground">{item.label}</span>
+                        <span className="text-xs font-semibold text-primary">+{item.pts}</span>
+                      </div>
+                      {item.cta && (
+                        <button onClick={() => navigate(item.cta!)} className="text-xs text-primary hover:underline flex items-center gap-0.5">
+                          {item.ctaLabel} <ArrowRight className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {scoreItems.filter(i => i.done).map(item => (
+                    <div key={item.label} className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <span className="text-xs text-muted-foreground line-through">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Card exclusivo inversores */}
             {INVESTOR_EMAILS.includes(user?.email ?? "") && (
@@ -408,6 +484,7 @@ export default function PatientDashboard() {
                       { label: "Mapa Farmacias",  sub: "Stock en tiempo real", icon: Store,    grad: "from-teal-500 to-emerald-600",     path: "/mapa-farmacias" },
                       { label: "Feed Social",     sub: "Comunidad médica",   icon: TrendingUp, grad: "from-violet-500 to-purple-600",   path: "/feed" },
                       { label: "Mi Expediente",  sub: "Historial médico",   icon: ClipboardList, grad: "from-cyan-500 to-blue-600",    path: "/expediente" },
+                      { label: "Síntoma Checker", sub: "Análisis con IA",  icon: Brain,         grad: "from-purple-500 to-indigo-600",  path: "/sintomas" },
                     ].map(({ label, sub, icon: Icon, grad, path }) => (
                       <button key={label} onClick={() => navigate(path)}
                         className="group flex flex-col items-start p-3 bg-background hover:bg-muted/40 rounded-xl border border-border/50 hover:border-primary/20 transition-all text-left">

@@ -3,6 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { X, CreditCard, Shield, CheckCircle, Calendar } from "lucide-react";
 
 function Estrellas({ rating, total, size = "sm" }: { rating: number, total: number, size?: string }) {
   return (
@@ -48,6 +51,12 @@ export default function DoctorDetail() {
   const [yaOpino, setYaOpino] = useState(false);
   const [citasCompletadas, setCitasCompletadas] = useState<any[]>([]);
   const [citaSeleccionada, setCitaSeleccionada] = useState<string>("");
+  const [showPagoModal, setShowPagoModal] = useState(false);
+  const [pagoFecha, setPagoFecha] = useState("");
+  const [pagoHora, setPagoHora] = useState("09:00");
+  const [pagoMotivo, setPagoMotivo] = useState("");
+  const [procesandoPago, setProcesandoPago] = useState(false);
+  const [pagoExitoso, setPagoExitoso] = useState(false);
 
   useEffect(() => {
     loadTodo();
@@ -118,6 +127,41 @@ export default function DoctorDetail() {
     setEnviandoOpinion(false);
   }
 
+  async function procesarPago() {
+    if (!user || !pagoFecha || !pagoHora) return;
+    setProcesandoPago(true);
+
+    // 1. Crear la cita como "confirmada" (pagada)
+    const { data: cita, error: citaErr } = await supabase.from("citas").insert({
+      doctor_id: id,
+      paciente_id: user.id,
+      fecha: pagoFecha,
+      hora: pagoHora,
+      motivo: pagoMotivo || "Consulta Online",
+      estado: "confirmada",
+    }).select().single();
+
+    if (citaErr || !cita) {
+      setProcesandoPago(false);
+      return;
+    }
+
+    // 2. Registrar el pago en pagos_citas
+    const refWompi = `WOMPI-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    await supabase.from("pagos_citas").insert({
+      cita_id: cita.id,
+      paciente_id: user.id,
+      doctor_id: id,
+      monto: doctor.precio_consulta,
+      moneda: "GTQ",
+      referencia_wompi: refWompi,
+      estado: "completado",
+    });
+
+    setProcesandoPago(false);
+    setPagoExitoso(true);
+  }
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <p className="text-gray-500">Cargando...</p>
@@ -159,10 +203,17 @@ export default function DoctorDetail() {
                 <p className="text-blue-900 font-semibold mt-2">Q{doctor.precio_consulta} por consulta</p>
               )}
             </div>
-            <button onClick={() => navigate(`/citas?doctor=${id}`)}
-              className="bg-blue-900 text-white font-semibold px-6 py-3 rounded-xl hover:bg-blue-950 transition flex items-center gap-2">
-              📅 Agendar Cita
-            </button>
+            {doctor.precio_consulta ? (
+              <button onClick={() => { setShowPagoModal(true); setPagoExitoso(false); }}
+                className="bg-blue-900 text-white font-semibold px-6 py-3 rounded-xl hover:bg-blue-950 transition flex items-center gap-2">
+                <CreditCard className="w-4 h-4" /> Reservar y Pagar Q{doctor.precio_consulta}
+              </button>
+            ) : (
+              <button onClick={() => navigate(`/citas?doctor=${id}`)}
+                className="bg-blue-900 text-white font-semibold px-6 py-3 rounded-xl hover:bg-blue-950 transition flex items-center gap-2">
+                📅 Agendar Cita
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -379,9 +430,9 @@ export default function DoctorDetail() {
                   {doctor.clinica && (
                     <div className="flex items-center justify-between border border-gray-200 rounded-lg p-2 bg-white mb-2">
                       <span className="text-sm font-medium text-gray-700">{doctor.clinica}</span>
-                      <button onClick={() => navigate(`/citas?doctor=${id}`)}
+                      <button onClick={() => doctor.precio_consulta ? setShowPagoModal(true) : navigate(`/citas?doctor=${id}`)}
                         className="bg-blue-900 text-white text-xs font-semibold px-3 py-1 rounded-lg hover:bg-blue-950 transition">
-                        Agendar
+                        {doctor.precio_consulta ? `Q${doctor.precio_consulta}` : "Agendar"}
                       </button>
                     </div>
                   )}
@@ -400,6 +451,107 @@ export default function DoctorDetail() {
           </div>
         </div>
       </div>
+
+      {/* Modal de pago Wompi */}
+      {showPagoModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-blue-900" />
+                <h3 className="font-bold text-gray-900">Reservar Consulta Online</h3>
+              </div>
+              <button onClick={() => { setShowPagoModal(false); setPagoExitoso(false); }} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {pagoExitoso ? (
+              <div className="p-8 text-center">
+                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">¡Pago exitoso!</h3>
+                <p className="text-gray-500 text-sm mb-2">Tu cita fue confirmada y registrada automáticamente.</p>
+                <p className="text-xs text-gray-400 mb-6">Revisá "Mis Citas" en tu dashboard para ver los detalles.</p>
+                <Button onClick={() => { setShowPagoModal(false); setPagoExitoso(false); navigate("/mis-citas"); }}
+                  className="bg-blue-900 hover:bg-blue-950 text-white font-bold px-8 rounded-xl">
+                  Ver mis citas
+                </Button>
+              </div>
+            ) : (
+              <div className="p-5 space-y-4">
+                {/* Resumen del pago */}
+                <div className="bg-blue-50 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-gray-900">{doctor.nombre}</p>
+                    <p className="text-sm text-gray-500">{doctor.especialidad}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-blue-900">Q{doctor.precio_consulta}</p>
+                    <p className="text-xs text-gray-400">Consulta Online</p>
+                  </div>
+                </div>
+
+                {/* Fecha y hora */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> Fecha
+                    </label>
+                    <Input type="date" value={pagoFecha} onChange={e => setPagoFecha(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      className="h-9 text-sm rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Hora</label>
+                    <Input type="time" value={pagoHora} onChange={e => setPagoHora(e.target.value)}
+                      className="h-9 text-sm rounded-lg" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Motivo (opcional)</label>
+                  <Input value={pagoMotivo} onChange={e => setPagoMotivo(e.target.value)}
+                    placeholder="Consulta general, seguimiento..." className="h-9 text-sm rounded-lg" />
+                </div>
+
+                {/* Wompi sandbox */}
+                <div className="border border-gray-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-gray-700">Pago seguro con</p>
+                    <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                      <Shield className="w-3 h-3 text-green-600" />
+                      <span className="text-xs font-bold text-green-700">Wompi</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Input placeholder="Número de tarjeta  4242 4242 4242 4242" className="h-9 text-sm font-mono" maxLength={19} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="MM/AA  12/26" className="h-9 text-sm" maxLength={5} />
+                      <Input placeholder="CVV  123" className="h-9 text-sm" maxLength={4} type="password" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                    <Shield className="w-3 h-3" /> Sandbox — usá 4242 4242 4242 4242 para probar
+                  </p>
+                </div>
+
+                <Button
+                  onClick={procesarPago}
+                  disabled={procesandoPago || !pagoFecha || !pagoHora || !user}
+                  className="w-full h-11 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl text-base gap-2"
+                >
+                  {procesandoPago ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Procesando...</>
+                  ) : (
+                    <><CreditCard className="w-4 h-4" /> Pagar Q{doctor.precio_consulta} y Confirmar</>
+                  )}
+                </Button>
+                {!user && <p className="text-xs text-center text-gray-400">Iniciá sesión para completar el pago</p>}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

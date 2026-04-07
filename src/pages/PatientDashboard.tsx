@@ -407,6 +407,7 @@ export default function PatientDashboard() {
                       { label: "Recordatorios",   sub: "Tomar a tiempo",     icon: Bell,      grad: "from-green-500 to-teal-500",       path: "/recordatorio-medicamentos" },
                       { label: "Chat Médico",     sub: "Con tu doctor",      icon: MessageCircle, grad: "from-blue-500 to-cyan-500",    path: "/chat" },
                       { label: "Mapa Farmacias",  sub: "Stock en tiempo real", icon: Store,    grad: "from-teal-500 to-emerald-600",     path: "/mapa-farmacias" },
+                      { label: "Feed Social",     sub: "Comunidad médica",   icon: TrendingUp, grad: "from-violet-500 to-purple-600",   path: "/feed" },
                     ].map(({ label, sub, icon: Icon, grad, path }) => (
                       <button key={label} onClick={() => navigate(path)}
                         className="group flex flex-col items-start p-3 bg-background hover:bg-muted/40 rounded-xl border border-border/50 hover:border-primary/20 transition-all text-left">

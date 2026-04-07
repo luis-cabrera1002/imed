@@ -35,6 +35,7 @@ import MedicineScanner from "./pages/MedicineScanner";
 import InvestorsDashboard from "./pages/InvestorsDashboard";
 import MapaFarmacias from "./pages/MapaFarmacias";
 import Chat from "./pages/Chat";
+import Feed from "./pages/Feed";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/investors" element={<InvestorsDashboard />} />
               <Route path="/mapa-farmacias" element={<MapaFarmacias />} />
               <Route path="/chat" element={<Chat />} />
+              <Route path="/feed" element={<Feed />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ViewProvider>

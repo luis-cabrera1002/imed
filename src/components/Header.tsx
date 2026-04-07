@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Search, Menu, User, LogOut, ChevronDown, Scan,
   Building2, Stethoscope, Calendar, Pill, FileText,
-  Heart, Home, Clock, LayoutDashboard, Store, Shield, Globe, MessageCircle, MapPin
+  Heart, Home, Clock, LayoutDashboard, Store, Shield, Globe, MessageCircle, MapPin, TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -71,6 +71,7 @@ const Header = () => {
     { to: "/modo-viajero", label: "Modo Viajero", icon: Globe },
     { to: "/chat", label: "Chat Médico", icon: MessageCircle },
     { to: "/mapa-farmacias", label: "Mapa Farmacias", icon: MapPin },
+    { to: "/feed", label: "Feed Social", icon: TrendingUp },
   ];
   
   return (

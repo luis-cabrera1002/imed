@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { functionsClient } from "@/integrations/supabase/functionsClient";
 import {
   Camera, Upload, Scan, CheckCircle, XCircle,
   MapPin, AlertCircle, RefreshCw, Info,
@@ -147,9 +148,9 @@ export default function MedicineScanner() {
     }
   }
 
-  // Analiza la imagen con Groq Vision via Edge Function del proyecto correcto
+  // Analiza la imagen con Groq Vision via Edge Function (proyecto usmjxdoboaxpbmuoproo)
   async function analyzeWithClaude(base64: string, mimeType: string) {
-    const { data, error } = await supabase.functions.invoke("analyze-medicine", {
+    const { data, error } = await functionsClient.functions.invoke("analyze-medicine", {
       body: { image: base64, mimeType },
     });
     if (error) throw error;

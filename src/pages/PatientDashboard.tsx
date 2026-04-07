@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { functionsClient } from "@/integrations/supabase/functionsClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -114,10 +115,8 @@ export default function PatientDashboard() {
     setAnalizando(doc.id);
     try {
       console.log("Analizando URL:", doc.url);
-      const { data: { session } } = await supabase.auth.getSession();
-      const { data, error } = await supabase.functions.invoke("analyze-document", {
+      const { data, error } = await functionsClient.functions.invoke("analyze-document", {
         body: { imageUrl: doc.url, tipo: doc.tipo },
-        headers: { Authorization: "Bearer " + session?.access_token }
       });
       console.log("Resultado:", data, "Error:", error);
       if (error) throw error;

@@ -147,15 +147,12 @@ export default function MedicineScanner() {
     }
   }
 
-  // Analiza la imagen con Claude API (vision)
+  // Analiza la imagen con Groq Vision via Edge Function del proyecto correcto
   async function analyzeWithClaude(base64: string, mimeType: string) {
-    const response = await fetch("https://usmjxdoboaxpbmuoproo.supabase.co/functions/v1/analyze-medicine", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzbWp4ZG9ib2F4cGJtdW9wcm9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODE5NTYsImV4cCI6MjA4OTQ1Nzk1Nn0.KnBC3PNZIEpvtn3jSw8M6octoXcBHFh1XPb7CQsW968" },
-      body: JSON.stringify({ image: base64, mimeType })
+    const { data, error } = await supabase.functions.invoke("analyze-medicine", {
+      body: { image: base64, mimeType },
     });
-
-    const data = await response.json();
+    if (error) throw error;
     return data;
   }
 

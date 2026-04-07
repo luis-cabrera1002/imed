@@ -164,7 +164,7 @@ const Header = () => {
                     <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     {role && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary w-fit">
-                        {role === 'doctor' ? '👨‍⚕️ Doctor' : '🏥 Paciente'}
+                        {role === 'doctor' ? '👨‍⚕️ Doctor' : role === 'pharmacy' ? '🏪 Farmacia' : '🏥 Paciente'}
                       </span>
                     )}
                   </div>
@@ -190,7 +190,7 @@ const Header = () => {
                     </DropdownMenuItem>
                   )}
                   {/* Dashboard Farmacia */}
-                  {viewMode === 'pharmacy' && (
+                  {role === 'pharmacy' && (
                     <DropdownMenuItem asChild>
                       <Link to="/pharmacy-dashboard" className="flex items-center gap-2 cursor-pointer font-medium text-primary">
                         <LayoutDashboard className="h-4 w-4" />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -32,6 +33,7 @@ const INVENTARIO_DEMO = [
 
 export default function PharmacyDashboard() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [tab, setTab] = useState("pedidos");
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,14 @@ export default function PharmacyDashboard() {
   const [scans, setScans] = useState<any[]>([]);
   const [scansLoading, setScansLoading] = useState(false);
 
-  useEffect(() => { loadPedidos(); loadScans(); }, []);
+  useEffect(() => {
+    // Auth guard
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { navigate("/auth"); return; }
+      loadPedidos();
+      loadScans();
+    });
+  }, []);
 
   async function loadScans() {
     setScansLoading(true);

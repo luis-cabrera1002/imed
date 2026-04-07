@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getDashboardPath } from "@/contexts/AuthContext";
 import { CheckCircle, Heart, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import imedLogo from "@/assets/imed-logo-new.png";
@@ -8,21 +9,56 @@ import imedLogo from "@/assets/imed-logo-new.png";
 export default function EmailConfirmado() {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // Supabase maneja la sesión automáticamente con el token en la URL
+    // Give Supabase a moment to process the confirmation token and set the session
+    const detectRole = async () => {
+      await new Promise(r => setTimeout(r, 800));
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
+        setRole(profile?.role ?? "patient");
+      }
+    };
+    detectRole();
+  }, []);
+
+  useEffect(() => {
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          navigate("/onboarding");
+          // Patients go through onboarding; doctors/pharmacies go straight to their dashboard
+          if (role === "doctor" || role === "pharmacy") {
+            navigate(getDashboardPath(role));
+          } else {
+            navigate("/onboarding");
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [role]);
+
+  function handleGoDashboard() {
+    if (role === "doctor" || role === "pharmacy") {
+      navigate(getDashboardPath(role));
+    } else {
+      navigate("/onboarding");
+    }
+  }
+
+  const dashboardLabel =
+    role === "doctor"   ? "Ir a mi Dashboard Médico" :
+    role === "pharmacy" ? "Ir a mi Dashboard Farmacia" :
+    "Comenzar configuración";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1e3a5f] via-[#1e4080] to-[#2563eb] flex items-center justify-center px-4">
@@ -39,12 +75,22 @@ export default function EmailConfirmado() {
           ¡Cuenta confirmada! 🎉
         </h1>
         <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-          Tu cuenta en <strong>iMed Guatemala</strong> ha sido verificada exitosamente. Ya podés acceder a todos los servicios médicos.
+          Tu cuenta en <strong>iMed Guatemala</strong> ha sido verificada exitosamente. Ya podés acceder a todos los servicios.
         </p>
 
-        {/* Features */}
+        {/* Features según rol */}
         <div className="bg-gray-50 rounded-2xl p-4 mb-6 text-left space-y-2">
-          {[
+          {role === "doctor" ? [
+            "👨‍⚕️ Completá tu perfil médico",
+            "📅 Recibí citas de pacientes",
+            "⭐ Obtené reseñas verificadas",
+            "📊 Gestioná tu agenda",
+          ] : role === "pharmacy" ? [
+            "🏪 Configurá tu farmacia",
+            "💊 Gestioná inventario en tiempo real",
+            "📈 Analytics de demanda",
+            "🤝 Conectá con pacientes",
+          ] : [
             "🏥 Buscá médicos y especialistas",
             "📅 Agendá citas en segundos",
             "💊 Escaneá tus medicamentos con IA",
@@ -56,9 +102,9 @@ export default function EmailConfirmado() {
 
         <Button
           className="w-full bg-gradient-to-r from-[#1e3a5f] to-[#2563eb] text-white rounded-xl py-3 font-bold gap-2"
-          onClick={() => navigate("/patient-dashboard")}
+          onClick={handleGoDashboard}
         >
-          Ir a mi Dashboard <ArrowRight className="w-4 h-4" />
+          {dashboardLabel} <ArrowRight className="w-4 h-4" />
         </Button>
 
         <p className="text-xs text-gray-400 mt-4">

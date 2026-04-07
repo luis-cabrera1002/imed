@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getDashboardPath } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,8 +27,18 @@ const Auth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { setError("Correo o contraseña incorrectos. Intenta de nuevo."); } else { navigate("/"); }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setError("Correo o contraseña incorrectos. Intenta de nuevo.");
+    } else if (data.user) {
+      // Fetch role and redirect to the correct dashboard
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .single();
+      navigate(getDashboardPath(profile?.role));
+    }
     setLoading(false);
   };
 

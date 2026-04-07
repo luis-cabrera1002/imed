@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.symptom-checker]
 verify_jwt = false
+
+[functions.transcribe-consulta]
+verify_jwt = false
+
+[functions.analyze-consulta]
+verify_jwt = false

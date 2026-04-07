@@ -11,7 +11,7 @@ import {
   FileText, Search, Plus, Save, Share2, Printer, Trash2,
   Stethoscope, Sparkles, CheckCircle, Clock, AlertCircle,
   X, ChevronDown, User, Lock, Calendar, Clipboard,
-  ArrowLeft, Brain,
+  ArrowLeft, Brain, Mic, MicOff, Radio, Wand2,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -444,6 +444,219 @@ export default function NotasClinicas() {
   // ── Print ─────────────────────────────────────────────────────────────────
   function printNota() {
     window.print();
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // iMed NOA — Voice Assistant
+  // ══════════════════════════════════════════════════════════════════════════
+  type NoaState = "idle" | "recording" | "transcribing" | "analyzing" | "done";
+
+  const [noaOpen, setNoaOpen] = useState(false);
+  const [noaState, setNoaState] = useState<NoaState>("idle");
+  const [noaTimer, setNoaTimer] = useState(0);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [noaResult, setNoaResult] = useState<Record<string, string> | null>(null);
+  const [noaChunkPending, setNoaChunkPending] = useState(false);
+
+  const recorderRef  = useRef<MediaRecorder | null>(null);
+  const streamRef    = useRef<MediaStream | null>(null);
+  const chunksRef    = useRef<Blob[]>([]);
+  const canvasRef    = useRef<HTMLCanvasElement | null>(null);
+  const analyserRef  = useRef<AnalyserNode | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const transcriptRef = useRef("");
+  const transcriptPanelRef = useRef<HTMLDivElement | null>(null);
+
+  function openNoa() {
+    setNoaOpen(true);
+    setNoaState("idle");
+    setNoaTimer(0);
+    setLiveTranscript("");
+    setNoaResult(null);
+    transcriptRef.current = "";
+    chunksRef.current = [];
+  }
+
+  function closeNoa() {
+    stopRecording();
+    setNoaOpen(false);
+    setNoaState("idle");
+  }
+
+  function drawWaveform() {
+    const canvas = canvasRef.current;
+    const analyser = analyserRef.current;
+    if (!canvas || !analyser) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    analyser.fftSize = 64;
+    const bufLen = analyser.frequencyBinCount;
+    const data = new Uint8Array(bufLen);
+
+    function frame() {
+      animFrameRef.current = requestAnimationFrame(frame);
+      analyser!.getByteFrequencyData(data);
+      ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
+      const bw = (canvas!.width / bufLen) - 1;
+      for (let i = 0; i < bufLen; i++) {
+        const ratio = data[i] / 255;
+        const bh = Math.max(4, ratio * canvas!.height);
+        const alpha = 0.3 + ratio * 0.7;
+        ctx!.fillStyle = `rgba(147, 51, 234, ${alpha})`;
+        const x = i * (bw + 1);
+        ctx!.beginPath();
+        ctx!.roundRect(x, canvas!.height - bh, bw, bh, 3);
+        ctx!.fill();
+      }
+    }
+    frame();
+  }
+
+  async function transcribeBlob(blob: Blob) {
+    if (blob.size < 1000) return; // skip tiny/empty chunks
+    setNoaChunkPending(true);
+    try {
+      const ab = await blob.arrayBuffer();
+      const bytes = new Uint8Array(ab);
+      let bin = "";
+      for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+      const b64 = btoa(bin);
+      const mime = blob.type || "audio/webm";
+
+      const { data } = await functionsClient.functions.invoke("transcribe-consulta", {
+        body: { audio: b64, mimeType: mime },
+      });
+
+      if (data?.text?.trim()) {
+        transcriptRef.current = (transcriptRef.current + " " + data.text).trim();
+        setLiveTranscript(transcriptRef.current);
+        setTimeout(() => {
+          if (transcriptPanelRef.current) {
+            transcriptPanelRef.current.scrollTop = transcriptPanelRef.current.scrollHeight;
+          }
+        }, 50);
+      }
+    } catch (e) {
+      console.error("transcribe chunk error:", e);
+    }
+    setNoaChunkPending(false);
+  }
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      // Web Audio waveform
+      const audioCtx = new AudioContext();
+      const analyser = audioCtx.createAnalyser();
+      const src = audioCtx.createMediaStreamSource(stream);
+      src.connect(analyser);
+      analyserRef.current = analyser;
+
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      recorderRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+          // Transcribe each 30s chunk as it arrives
+          transcribeBlob(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        // If there's accumulated but un-transcribed data (shouldn't happen with timeslice)
+        // wait a tick for last transcription, then analyze
+        setNoaState("analyzing");
+        await new Promise(r => setTimeout(r, 500));
+        await analyzeTranscript();
+      };
+
+      recorder.start(30000); // emit chunk every 30s
+
+      setNoaState("recording");
+      setNoaTimer(0);
+      timerRef.current = setInterval(() => setNoaTimer(t => t + 1), 1000);
+
+      // Start waveform after a tick (canvas needs to be mounted)
+      setTimeout(drawWaveform, 100);
+    } catch (err) {
+      toast({ title: "No se pudo acceder al micrófono", description: "Permití el acceso en tu navegador.", variant: "destructive" });
+      console.error("microphone error:", err);
+    }
+  }
+
+  function stopRecording() {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (animFrameRef.current) { cancelAnimationFrame(animFrameRef.current); animFrameRef.current = null; }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      setNoaState("transcribing");
+      recorderRef.current.stop();
+    }
+  }
+
+  async function analyzeTranscript() {
+    if (!transcriptRef.current.trim()) {
+      toast({ title: "Sin transcripción", description: "No se detectó audio suficiente.", variant: "destructive" });
+      setNoaState("idle");
+      return;
+    }
+    setNoaState("analyzing");
+    try {
+      const { data } = await functionsClient.functions.invoke("analyze-consulta", {
+        body: { transcripcion: transcriptRef.current },
+      });
+      if (data && !data.error) {
+        setNoaResult(data);
+        setNoaState("done");
+      } else {
+        throw new Error(data?.error || "Unknown error");
+      }
+    } catch (e) {
+      console.error("analyze-consulta error:", e);
+      toast({ title: "Error al analizar", description: "No se pudo procesar la consulta.", variant: "destructive" });
+      setNoaState("idle");
+    }
+  }
+
+  function applyNoaResult() {
+    if (!noaResult) return;
+    const transcriptSnippet = transcriptRef.current.length > 600
+      ? transcriptRef.current.slice(0, 600) + "..."
+      : transcriptRef.current;
+    const notasExtra = [
+      form.notas_privadas,
+      noaResult.resumen_expediente ? `\n[NOA Resumen] ${noaResult.resumen_expediente}` : "",
+      noaResult.instrucciones_paciente ? `[NOA Instrucciones] ${noaResult.instrucciones_paciente}` : "",
+      noaResult.recordatorios_sugeridos ? `[NOA Recordatorios] ${noaResult.recordatorios_sugeridos}` : "",
+      `\n[NOA Transcripción] ${transcriptSnippet}`,
+    ].filter(Boolean).join("\n").trim();
+
+    setForm(prev => ({
+      ...prev,
+      motivo_consulta: noaResult!.motivo_consulta || prev.motivo_consulta,
+      examen_fisico:   noaResult!.examen_fisico   || prev.examen_fisico,
+      diagnostico:     noaResult!.diagnostico      || prev.diagnostico,
+      codigo_cie10:    noaResult!.codigo_cie10     || prev.codigo_cie10,
+      plan_tratamiento:       noaResult!.plan_tratamiento      || prev.plan_tratamiento,
+      medicamentos_recetados: noaResult!.medicamentos_recetados || prev.medicamentos_recetados,
+      proxima_cita:    noaResult!.proxima_cita     || prev.proxima_cita,
+      notas_privadas:  notasExtra,
+    }));
+    setAutosaveStatus("unsaved");
+    setNoaOpen(false);
+    setNoaState("idle");
+    toast({ title: "✨ Nota completada con NOA", description: "Los campos fueron llenados automáticamente." });
+  }
+
+  function fmtTime(s: number) {
+    const m = Math.floor(s / 60).toString().padStart(2, "0");
+    const sec = (s % 60).toString().padStart(2, "0");
+    return `${m}:${sec}`;
   }
 
   // ─── Filtered notes list ──────────────────────────────────────────────────
@@ -972,6 +1185,212 @@ export default function NotasClinicas() {
           </div>
         </div>
       </div>
+
+      {/* ── NOA Floating Button ── */}
+      {activeNota && (
+        <button
+          onClick={noaOpen ? closeNoa : openNoa}
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 no-print"
+          style={{
+            background: noaState === "recording"
+              ? "linear-gradient(135deg,#ef4444,#dc2626)"
+              : "linear-gradient(135deg,#6366f1,#4f46e5)",
+          }}
+          title="iMed NOA — Asistente de Voz"
+        >
+          {noaState === "recording" ? (
+            <MicOff className="w-6 h-6 text-white" />
+          ) : noaState === "transcribing" || noaState === "analyzing" ? (
+            <Radio className="w-6 h-6 text-white animate-pulse" />
+          ) : (
+            <Mic className="w-6 h-6 text-white" />
+          )}
+        </button>
+      )}
+
+      {/* ── NOA Modal ── */}
+      {noaOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 no-print">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeNoa} />
+
+          {/* Panel */}
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-5 py-4"
+              style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)" }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Mic className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">iMed NOA</p>
+                  <p className="text-indigo-200 text-xs">Asistente de Voz con IA</p>
+                </div>
+              </div>
+              <button onClick={closeNoa} className="text-white/70 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* ── IDLE state ── */}
+              {noaState === "idle" && !noaResult && (
+                <div className="text-center space-y-4 py-2">
+                  <div className="w-20 h-20 rounded-full bg-indigo-50 flex items-center justify-center mx-auto">
+                    <Mic className="w-10 h-10 text-indigo-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800">Dictá la consulta</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Hablá con normalidad durante la consulta. NOA transcribirá y llenará el formulario automáticamente.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-xs text-gray-500">
+                    <div className="bg-indigo-50 rounded-xl p-3 text-center">
+                      <p className="font-semibold text-indigo-700">Motivo</p>
+                      <p>detectado</p>
+                    </div>
+                    <div className="bg-indigo-50 rounded-xl p-3 text-center">
+                      <p className="font-semibold text-indigo-700">Diagnóstico</p>
+                      <p>+ CIE-10</p>
+                    </div>
+                    <div className="bg-indigo-50 rounded-xl p-3 text-center">
+                      <p className="font-semibold text-indigo-700">Plan</p>
+                      <p>+ medicamentos</p>
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full rounded-xl h-12 text-sm font-semibold"
+                    style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)", color: "white" }}
+                    onClick={startRecording}
+                  >
+                    <Mic className="w-4 h-4 mr-2" /> Iniciar grabación
+                  </Button>
+                </div>
+              )}
+
+              {/* ── RECORDING state ── */}
+              {noaState === "recording" && (
+                <div className="space-y-4">
+                  {/* Timer + waveform */}
+                  <div className="bg-red-50 rounded-2xl p-4 text-center space-y-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                      <span className="text-red-700 font-mono text-lg font-bold">{fmtTime(noaTimer)}</span>
+                    </div>
+                    <canvas
+                      ref={canvasRef}
+                      width={340}
+                      height={48}
+                      className="w-full rounded-xl"
+                      style={{ background: "rgba(239,68,68,0.08)" }}
+                    />
+                    <p className="text-xs text-red-600">
+                      {noaChunkPending ? "Transcribiendo fragmento..." : "Hablá con naturalidad..."}
+                    </p>
+                  </div>
+
+                  {/* Live transcript */}
+                  {liveTranscript && (
+                    <div
+                      ref={transcriptPanelRef}
+                      className="max-h-40 overflow-y-auto rounded-xl bg-gray-50 border border-gray-100 p-3 text-sm text-gray-700 leading-relaxed"
+                    >
+                      {liveTranscript}
+                    </div>
+                  )}
+
+                  <Button
+                    className="w-full rounded-xl h-12 text-sm font-semibold bg-red-500 hover:bg-red-600 text-white"
+                    onClick={stopRecording}
+                  >
+                    <MicOff className="w-4 h-4 mr-2" /> Detener y analizar
+                  </Button>
+                </div>
+              )}
+
+              {/* ── TRANSCRIBING state ── */}
+              {noaState === "transcribing" && (
+                <div className="text-center py-6 space-y-3">
+                  <Radio className="w-10 h-10 text-indigo-500 animate-pulse mx-auto" />
+                  <p className="font-semibold text-gray-700">Transcribiendo audio...</p>
+                  <p className="text-sm text-gray-400">Groq Whisper procesando tu grabación</p>
+                  {liveTranscript && (
+                    <div className="text-left bg-gray-50 rounded-xl p-3 text-sm text-gray-600 max-h-32 overflow-y-auto">
+                      {liveTranscript}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── ANALYZING state ── */}
+              {noaState === "analyzing" && (
+                <div className="text-center py-6 space-y-3">
+                  <Brain className="w-10 h-10 text-indigo-500 animate-pulse mx-auto" />
+                  <p className="font-semibold text-gray-700">Analizando con IA...</p>
+                  <p className="text-sm text-gray-400">Extrayendo datos clínicos de la transcripción</p>
+                  <div className="space-y-1.5 text-left">
+                    {["Motivo de consulta", "Diagnóstico + CIE-10", "Plan de tratamiento", "Medicamentos"].map(item => (
+                      <div key={item} className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse flex-shrink-0" />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── DONE state ── */}
+              {noaState === "done" && noaResult && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-green-700 bg-green-50 rounded-xl px-3 py-2">
+                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                    <p className="text-sm font-semibold">Análisis completado</p>
+                  </div>
+
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {[
+                      { key: "motivo_consulta", label: "Motivo de consulta" },
+                      { key: "diagnostico", label: "Diagnóstico" },
+                      { key: "codigo_cie10", label: "Código CIE-10" },
+                      { key: "plan_tratamiento", label: "Plan de tratamiento" },
+                      { key: "medicamentos_recetados", label: "Medicamentos" },
+                      { key: "proxima_cita", label: "Próxima cita" },
+                    ]
+                      .filter(f => noaResult[f.key])
+                      .map(f => (
+                        <div key={f.key} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                          <p className="text-xs font-semibold text-gray-500 uppercase mb-0.5">{f.label}</p>
+                          <p className="text-sm text-gray-800 line-clamp-2">{noaResult[f.key]}</p>
+                        </div>
+                      ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      className="rounded-xl h-11 text-sm"
+                      onClick={() => { setNoaState("idle"); setNoaResult(null); setLiveTranscript(""); transcriptRef.current = ""; }}
+                    >
+                      Descartar
+                    </Button>
+                    <Button
+                      className="rounded-xl h-11 text-sm font-semibold"
+                      style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)", color: "white" }}
+                      onClick={() => { applyNoaResult(); closeNoa(); }}
+                    >
+                      <Wand2 className="w-4 h-4 mr-1.5" /> Aplicar al formulario
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

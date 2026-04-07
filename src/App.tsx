@@ -36,6 +36,8 @@ import InvestorsDashboard from "./pages/InvestorsDashboard";
 import MapaFarmacias from "./pages/MapaFarmacias";
 import Chat from "./pages/Chat";
 import Feed from "./pages/Feed";
+import Expediente from "./pages/Expediente";
+import RecetaVerificacion from "./pages/RecetaVerificacion";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,6 +81,8 @@ const App = () => (
               <Route path="/mapa-farmacias" element={<MapaFarmacias />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/feed" element={<Feed />} />
+              <Route path="/expediente" element={<Expediente />} />
+              <Route path="/receta/:qr_code" element={<RecetaVerificacion />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ViewProvider>

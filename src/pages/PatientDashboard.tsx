@@ -11,7 +11,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
   Search, User, Activity, LogOut, Star, Shield, Bell, Scan,
-  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, MessageCircle, Store
+  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, MessageCircle, Store, ClipboardList
 } from "lucide-react";
 
 const ESTADO: Record<string, { label: string; color: string; dot: string }> = {
@@ -407,6 +407,7 @@ export default function PatientDashboard() {
                       { label: "Chat Médico",     sub: "Con tu doctor",      icon: MessageCircle, grad: "from-blue-500 to-cyan-500",    path: "/chat" },
                       { label: "Mapa Farmacias",  sub: "Stock en tiempo real", icon: Store,    grad: "from-teal-500 to-emerald-600",     path: "/mapa-farmacias" },
                       { label: "Feed Social",     sub: "Comunidad médica",   icon: TrendingUp, grad: "from-violet-500 to-purple-600",   path: "/feed" },
+                      { label: "Mi Expediente",  sub: "Historial médico",   icon: ClipboardList, grad: "from-cyan-500 to-blue-600",    path: "/expediente" },
                     ].map(({ label, sub, icon: Icon, grad, path }) => (
                       <button key={label} onClick={() => navigate(path)}
                         className="group flex flex-col items-start p-3 bg-background hover:bg-muted/40 rounded-xl border border-border/50 hover:border-primary/20 transition-all text-left">

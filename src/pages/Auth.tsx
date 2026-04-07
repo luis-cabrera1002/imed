@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getDashboardPath } from "@/contexts/AuthContext";
@@ -9,7 +9,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { User, Stethoscope, Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle, Store } from "lucide-react";
 
-type Mode = "choose" | "login" | "register-patient" | "register-doctor" | "register-pharmacy" | "forgot-password";
+type Mode = "choose" | "login" | "register-patient" | "register-doctor" | "register-pharmacy" | "forgot-password" | "reset-password";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -19,11 +19,21 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const resetForm = () => { setEmail(""); setPassword(""); setFullName(""); setPhone(""); setError(""); setSuccess(""); setShowPassword(false); };
+  const resetForm = () => { setEmail(""); setPassword(""); setNewPassword(""); setFullName(""); setPhone(""); setError(""); setSuccess(""); setShowPassword(false); };
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("reset-password");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError("");
@@ -49,6 +59,17 @@ const Auth = () => {
     });
     if (error) { setError("No se pudo enviar el correo. Verificá el email ingresado."); }
     else { setSuccess("Te enviamos un enlace para restablecer tu contraseña. Revisá tu correo."); }
+    setLoading(false);
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault(); setLoading(true); setError("");
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) { setError("No se pudo actualizar la contraseña. Intentá de nuevo."); }
+    else {
+      setSuccess("¡Contraseña actualizada correctamente!");
+      setTimeout(() => navigate("/patient-dashboard"), 2000);
+    }
     setLoading(false);
   };
 
@@ -351,6 +372,45 @@ const Auth = () => {
                     </div>
                     {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-700 text-sm font-medium">{error}</p></div>}
                     <Button type="submit" disabled={loading} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl shadow-md">{loading ? "Enviando..." : "Enviar enlace de recuperación"}</Button>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      <Footer /></div>
+    );
+  }
+
+  if (mode === "reset-password") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white"><Header />
+        <div className="flex flex-col items-center justify-center px-4 py-16">
+          <div className="w-full max-w-md">
+            <Card className="shadow-xl border-0 rounded-3xl overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-700 to-blue-500 px-8 py-7 text-center">
+                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3"><Lock className="w-7 h-7 text-white" /></div>
+                <h2 className="text-2xl font-bold text-white">Nueva contraseña</h2>
+                <p className="text-blue-100 text-sm mt-1">Ingresá tu nueva contraseña</p>
+              </div>
+              <CardContent className="p-8">
+                {success ? (
+                  <div className="text-center py-6">
+                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">¡Contraseña actualizada!</h3>
+                    <p className="text-gray-600 text-sm mb-6">{success}</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleResetPassword} className="space-y-5">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Nueva contraseña</label>
+                      <div className="relative">
+                        <Input type={showPassword ? "text" : "password"} placeholder="Mínimo 6 caracteres" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} className="h-12 rounded-xl border-gray-200 focus:border-blue-400 text-base pr-12" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
+                      </div>
+                    </div>
+                    {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-700 text-sm font-medium">{error}</p></div>}
+                    <Button type="submit" disabled={loading || newPassword.length < 6} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl shadow-md">{loading ? "Actualizando..." : "Actualizar contraseña"}</Button>
                   </form>
                 )}
               </CardContent>

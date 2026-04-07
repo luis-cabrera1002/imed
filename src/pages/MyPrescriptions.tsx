@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Pill, CheckCircle2, AlertCircle, Send, X, MapPin, Clock, User, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Pill, CheckCircle2, AlertCircle, Send, X, MapPin, Clock, User, ChevronDown, ChevronUp, QrCode } from "lucide-react";
 
 const FARMACIAS = [
   { nombre: "Farmacia del Ahorro Zona 10", direccion: "Av. La Reforma 15-20, Zona 10", telefono: "2331-4500", horario: "24 horas", rating: 4.5 },
@@ -20,6 +20,7 @@ export default function MyPrescriptions() {
   const { toast } = useToast();
   const [tab, setTab] = useState("recetas");
   const [recetas, setRecetas] = useState([]);
+  const [recetasDigitales, setRecetasDigitales] = useState([]);
   const [prereqs, setPrereqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
@@ -35,7 +36,7 @@ export default function MyPrescriptions() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { navigate("/auth"); return; }
     setUser(user);
-    await Promise.all([loadRecetas(user.id), loadPrereqs(user.id)]);
+    await Promise.all([loadRecetas(user.id), loadPrereqs(user.id), loadRecetasDigitales(user.id)]);
     setLoading(false);
   }
 
@@ -58,6 +59,22 @@ export default function MyPrescriptions() {
       clinica: dProfiles?.find(p => p.user_id === r.doctor_id)?.clinica || "",
       pedido: (pedidos||[]).find(p => p.receta_id === r.id) || null,
     })));
+  }
+
+  async function loadRecetasDigitales(uid) {
+    const { data } = await supabase.from("recetas_digitales").select("*").eq("paciente_id", uid).order("created_at", { ascending: false });
+    if (data) {
+      const doctorIds = [...new Set(data.map(r => r.doctor_id))];
+      const [{ data: profiles }, { data: dProfiles }] = await Promise.all([
+        supabase.from("profiles").select("user_id, full_name").in("user_id", doctorIds),
+        supabase.from("doctor_profiles").select("user_id, especialidad, clinica").in("user_id", doctorIds),
+      ]);
+      setRecetasDigitales(data.map(r => ({
+        ...r,
+        doctor_nombre: profiles?.find(p => p.user_id === r.doctor_id)?.full_name || "Dr.",
+        especialidad: dProfiles?.find(p => p.user_id === r.doctor_id)?.especialidad || "",
+      })));
+    }
   }
 
   async function loadPrereqs(uid) {
@@ -115,10 +132,15 @@ export default function MyPrescriptions() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
+          <button onClick={() => setTab("digitales")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${tab==="digitales" ? "border-teal-500 text-teal-700 bg-white" : "border-gray-200 text-gray-500 bg-white hover:border-gray-300"}`}>
+            <QrCode className="w-4 h-4"/> Recetas QR
+            {recetasDigitales.length > 0 && <span className="bg-teal-100 text-teal-700 text-xs px-1.5 py-0.5 rounded-full font-bold">{recetasDigitales.length}</span>}
+          </button>
           <button onClick={() => setTab("recetas")}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${tab==="recetas" ? "border-teal-500 text-teal-700 bg-white" : "border-gray-200 text-gray-500 bg-white hover:border-gray-300"}`}>
-            <FileText className="w-4 h-4"/> Recetas Médicas
+            <FileText className="w-4 h-4"/> Recetas Clásicas
             {recetas.length > 0 && <span className="bg-teal-100 text-teal-700 text-xs px-1.5 py-0.5 rounded-full font-bold">{recetas.length}</span>}
           </button>
           <button onClick={() => setTab("prereqs")}
@@ -127,6 +149,55 @@ export default function MyPrescriptions() {
             {prereqs.filter(p=>!p.completado).length > 0 && <span className="bg-red-100 text-red-700 text-xs px-1.5 py-0.5 rounded-full font-bold">{prereqs.filter(p=>!p.completado).length}</span>}
           </button>
         </div>
+
+        {/* RECETAS DIGITALES QR */}
+        {tab === "digitales" && (
+          <div className="space-y-4">
+            {recetasDigitales.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <QrCode className="w-12 h-12 mx-auto mb-3 opacity-30"/>
+                <p className="font-medium">No tienes recetas digitales aún</p>
+                <p className="text-sm mt-1">Tu médico te enviará recetas con código QR después de la consulta</p>
+              </div>
+            ) : recetasDigitales.map(r => (
+              <Card key={r.id} className="border-0 shadow-sm rounded-2xl overflow-hidden">
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + "/receta/" + r.qr_code)}`}
+                      alt="QR de receta"
+                      className="w-20 h-20 rounded-xl border border-gray-100 flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-1">
+                        <div>
+                          <p className="font-bold text-gray-900">{r.doctor_nombre}</p>
+                          {r.especialidad && <p className="text-teal-600 text-xs font-medium">{r.especialidad}</p>}
+                          <p className="text-xs text-gray-400 mt-0.5">{fmtFecha(r.fecha)}</p>
+                        </div>
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${r.estado==="activa"?"bg-green-100 text-green-700":r.estado==="usada"?"bg-gray-100 text-gray-600":"bg-red-100 text-red-700"}`}>
+                          {r.estado === "activa" ? "Activa" : r.estado === "usada" ? "Usada" : "Vencida"}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {(r.medicamentos||[]).map((m, i) => (
+                          <span key={i} className="bg-teal-50 text-teal-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                            {m.nombre}{m.dosis ? ` ${m.dosis}` : ""}
+                          </span>
+                        ))}
+                      </div>
+                      {r.notas && <p className="text-xs text-gray-500 mt-2 italic">"{r.notas}"</p>}
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
+                    <QrCode className="w-3.5 h-3.5 text-gray-400"/>
+                    <p className="text-xs text-gray-400">Muestra el QR a la farmacia para verificar esta receta</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* RECETAS */}
         {tab === "recetas" && (

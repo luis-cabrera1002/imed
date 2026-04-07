@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   User, Calendar, DollarSign, Star, Clock, CheckCircle, XCircle, Brain,
   AlertCircle, TrendingUp, Users, Stethoscope, MapPin, Phone,
-  Edit, Save, LogOut, ChevronRight, Activity
+  Edit, Save, LogOut, ChevronRight, Activity, FileText, Plus, X, QrCode, ClipboardList
 } from "lucide-react";
 
 const ESPECIALIDADES = [
@@ -36,7 +36,11 @@ export default function DoctorDashboard() {
   const [saving, setSaving] = useState(false);
   const [citas, setCitas] = useState([]);
   const [opiniones, setOpiniones] = useState([]);
+  const [recetas, setRecetas] = useState([]);
   const [activeTab, setActiveTab] = useState("inicio");
+  const [showRecetaForm, setShowRecetaForm] = useState(false);
+  const [recetaForm, setRecetaForm] = useState({ paciente_id: "", medicamentos: [{ nombre: "", dosis: "", frecuencia: "", duracion: "", instrucciones: "" }], notas: "" });
+  const [savingReceta, setSavingReceta] = useState(false);
   const [fullName, setFullName] = useState("");
   const [citaFilter, setCitaFilter] = useState("todas");
   const [perfil, setPerfil] = useState({
@@ -52,7 +56,7 @@ export default function DoctorDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { navigate("/auth"); return; }
     setUser(user);
-    await Promise.all([loadPerfil(user.id), loadCitas(user.id), loadOpiniones(user.id), loadFullName(user.id)]);
+    await Promise.all([loadPerfil(user.id), loadCitas(user.id), loadOpiniones(user.id), loadFullName(user.id), loadRecetas(user.id)]);
     setLoading(false);
   }
 
@@ -85,6 +89,18 @@ export default function DoctorDashboard() {
     }
   }
 
+  async function loadRecetas(userId) {
+    const { data } = await supabase.from("recetas_digitales").select("*, paciente:paciente_id(full_name:profiles(full_name))").eq("doctor_id", userId).order("created_at", { ascending: false });
+    if (data) {
+      // Fetch patient names separately
+      const pIds = [...new Set(data.map(r => r.paciente_id))];
+      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name").in("user_id", pIds);
+      const pm: Record<string, string> = {};
+      (profiles || []).forEach(p => { pm[p.user_id] = p.full_name; });
+      setRecetas(data.map(r => ({ ...r, paciente_nombre: pm[r.paciente_id] || "Paciente" })));
+    }
+  }
+
   async function loadOpiniones(userId) {
     const { data } = await supabase.from("opiniones").select("*").eq("doctor_id", userId).order("created_at", { ascending: false });
     if (data) setOpiniones(data);
@@ -105,6 +121,27 @@ export default function DoctorDashboard() {
     if (error) { toast({ title: "Error al guardar", description: error.message, variant: "destructive" }); }
     else { toast({ title: "✅ Perfil guardado", description: "Tu información fue actualizada." }); }
     setSaving(false);
+  }
+
+  async function createReceta() {
+    if (!user || !recetaForm.paciente_id || recetaForm.medicamentos.every(m => !m.nombre)) return;
+    setSavingReceta(true);
+    const meds = recetaForm.medicamentos.filter(m => m.nombre.trim());
+    const { error } = await supabase.from("recetas_digitales").insert({
+      doctor_id: user.id,
+      paciente_id: recetaForm.paciente_id,
+      medicamentos: meds,
+      notas: recetaForm.notas || null,
+    });
+    if (!error) {
+      toast({ title: "Receta creada", description: "La receta digital fue generada con QR." });
+      setShowRecetaForm(false);
+      setRecetaForm({ paciente_id: "", medicamentos: [{ nombre: "", dosis: "", frecuencia: "", duracion: "", instrucciones: "" }], notas: "" });
+      await loadRecetas(user.id);
+    } else {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+    setSavingReceta(false);
   }
 
   async function updateCitaEstado(citaId, estado) {
@@ -173,10 +210,10 @@ export default function DoctorDashboard() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-4 flex gap-1">
-          {["inicio","citas","opiniones","perfil"].map(tab => (
+          {["inicio","citas","recetas","opiniones","perfil"].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-800"}`}>
-              {tab === "inicio" ? "Inicio" : tab === "citas" ? `Citas (${citas.length})` : tab === "opiniones" ? `Reseñas (${opiniones.length})` : "Mi Perfil"}
+              {tab === "inicio" ? "Inicio" : tab === "citas" ? `Citas (${citas.length})` : tab === "recetas" ? `Recetas (${recetas.length})` : tab === "opiniones" ? `Reseñas (${opiniones.length})` : "Mi Perfil"}
             </button>
           ))}
         </div>
@@ -329,12 +366,114 @@ export default function DoctorDashboard() {
                             {c.estado==="confirmada" && (
                               <Button size="sm" className="text-xs bg-blue-600 hover:bg-blue-700 text-white h-7 px-3" onClick={() => updateCitaEstado(c.id,"completada")}>Marcar completada</Button>
                             )}
+                            <Button size="sm" variant="outline" className="text-xs h-7 px-2 gap-1 border-gray-200" onClick={() => navigate(`/expediente?patient_id=${c.paciente_id}`)}>
+                              <ClipboardList className="w-3 h-3"/> Expediente
+                            </Button>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "recetas" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-gray-900">Recetas Digitales</h2>
+              <Button size="sm" className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowRecetaForm(true)}>
+                <Plus className="w-3.5 h-3.5"/> Nueva Receta
+              </Button>
+            </div>
+
+            {showRecetaForm && (
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><FileText className="w-4 h-4 text-blue-600"/>Nueva Receta Digital</h3>
+                    <button onClick={() => setShowRecetaForm(false)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4"/></button>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">ID del Paciente</label>
+                    <select className="w-full h-9 border border-gray-200 rounded-lg px-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      value={recetaForm.paciente_id} onChange={e => setRecetaForm(f => ({...f, paciente_id: e.target.value}))}>
+                      <option value="">Seleccionar paciente...</option>
+                      {[...new Map(citas.map(c => [c.paciente_id, c.paciente_nombre])).entries()].map(([id, name]) => (
+                        <option key={id} value={id}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">Medicamentos</label>
+                    {recetaForm.medicamentos.map((med, i) => (
+                      <div key={i} className="bg-gray-50 rounded-xl p-3 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <input className="h-8 border border-gray-200 rounded-lg px-2 text-sm focus:outline-none" placeholder="Nombre del medicamento *" value={med.nombre} onChange={e => setRecetaForm(f => { const m=[...f.medicamentos]; m[i]={...m[i],nombre:e.target.value}; return {...f,medicamentos:m}; })}/>
+                          <input className="h-8 border border-gray-200 rounded-lg px-2 text-sm focus:outline-none" placeholder="Dosis (ej: 500mg)" value={med.dosis} onChange={e => setRecetaForm(f => { const m=[...f.medicamentos]; m[i]={...m[i],dosis:e.target.value}; return {...f,medicamentos:m}; })}/>
+                          <input className="h-8 border border-gray-200 rounded-lg px-2 text-sm focus:outline-none" placeholder="Frecuencia (ej: cada 8h)" value={med.frecuencia} onChange={e => setRecetaForm(f => { const m=[...f.medicamentos]; m[i]={...m[i],frecuencia:e.target.value}; return {...f,medicamentos:m}; })}/>
+                          <input className="h-8 border border-gray-200 rounded-lg px-2 text-sm focus:outline-none" placeholder="Duración (ej: 7 días)" value={med.duracion} onChange={e => setRecetaForm(f => { const m=[...f.medicamentos]; m[i]={...m[i],duracion:e.target.value}; return {...f,medicamentos:m}; })}/>
+                        </div>
+                        <div className="flex gap-2">
+                          <input className="flex-1 h-8 border border-gray-200 rounded-lg px-2 text-sm focus:outline-none" placeholder="Instrucciones adicionales" value={med.instrucciones} onChange={e => setRecetaForm(f => { const m=[...f.medicamentos]; m[i]={...m[i],instrucciones:e.target.value}; return {...f,medicamentos:m}; })}/>
+                          {recetaForm.medicamentos.length > 1 && (
+                            <button className="text-red-400 hover:text-red-600" onClick={() => setRecetaForm(f => ({...f, medicamentos: f.medicamentos.filter((_,j)=>j!==i)}))}>
+                              <X className="w-4 h-4"/>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => setRecetaForm(f => ({...f, medicamentos: [...f.medicamentos, {nombre:"",dosis:"",frecuencia:"",duracion:"",instrucciones:""}]}))}>
+                      <Plus className="w-3 h-3"/> Agregar medicamento
+                    </Button>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Notas</label>
+                    <textarea className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none resize-none" rows={2} placeholder="Indicaciones adicionales..." value={recetaForm.notas} onChange={e => setRecetaForm(f => ({...f, notas: e.target.value}))}/>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => setShowRecetaForm(false)}>Cancelar</Button>
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5" onClick={createReceta} disabled={savingReceta || !recetaForm.paciente_id}>
+                      {savingReceta ? "Guardando..." : <><QrCode className="w-3.5 h-3.5"/> Crear Receta con QR</>}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {recetas.length === 0 && !showRecetaForm ? (
+              <div className="text-center py-16 text-gray-400">
+                <FileText className="w-12 h-12 mx-auto mb-3 opacity-30"/>
+                <p>No has creado recetas digitales aún</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recetas.map(r => (
+                  <Card key={r.id} className="border-0 shadow-sm">
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-4">
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(window.location.origin + "/receta/" + r.qr_code)}`}
+                          alt="QR" className="w-16 h-16 rounded-lg border border-gray-100 flex-shrink-0"/>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="font-bold text-gray-900">{r.paciente_nombre}</p>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.estado==="activa"?"bg-green-100 text-green-700":r.estado==="usada"?"bg-gray-100 text-gray-600":"bg-red-100 text-red-700"}`}>{r.estado}</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mb-2">{new Date(r.fecha).toLocaleDateString("es-GT")}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {(r.medicamentos||[]).slice(0,3).map((m,i) => (
+                              <span key={i} className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">{m.nombre} {m.dosis}</span>
+                            ))}
+                            {(r.medicamentos||[]).length > 3 && <span className="text-xs text-gray-400">+{r.medicamentos.length-3} más</span>}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </div>

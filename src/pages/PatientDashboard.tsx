@@ -37,6 +37,7 @@ export default function PatientDashboard() {
   const { supported, isSubscribed, permission, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
   const [escaneos, setEscaneos]       = useState<any[]>([]);
   const [documentos, setDocumentos]   = useState<any[]>([]);
+  const [notasCompartidas, setNotasCompartidas] = useState<any[]>([]);
   const [uploading, setUploading]     = useState(false);
   const [analizando, setAnalizando]   = useState<string | null>(null);
   const [analisisIA, setAnalisisIA]   = useState<Record<string, any>>({});
@@ -51,7 +52,7 @@ export default function PatientDashboard() {
 
   async function loadData(uid: string) {
     setLoading(true);
-    await Promise.all([loadPerfil(uid), loadCitas(uid), loadRecetas(uid), loadEscaneos(uid), loadDocumentos(uid), loadExpediente(uid), loadRecordatorios(uid)]);
+    await Promise.all([loadPerfil(uid), loadCitas(uid), loadRecetas(uid), loadEscaneos(uid), loadDocumentos(uid), loadExpediente(uid), loadRecordatorios(uid), loadNotasCompartidas(uid)]);
     setLoading(false);
   }
 
@@ -138,6 +139,22 @@ export default function PatientDashboard() {
   async function loadRecordatorios(uid: string) {
     const { count } = await supabase.from("medication_reminders").select("id", { count: "exact", head: true }).eq("user_id", uid).eq("activo", true);
     setRecordatoriosCount(count ?? 0);
+  }
+
+  async function loadNotasCompartidas(uid: string) {
+    const { data } = await supabase
+      .from("notas_clinicas")
+      .select("*")
+      .eq("paciente_id", uid)
+      .eq("compartida_con_paciente", true)
+      .order("created_at", { ascending: false });
+    if (data) {
+      const dIds = [...new Set(data.map((n: any) => n.doctor_id))];
+      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name").in("user_id", dIds);
+      const pm: Record<string, string> = {};
+      (profiles || []).forEach((p: any) => { pm[p.user_id] = p.full_name; });
+      setNotasCompartidas(data.map((n: any) => ({ ...n, doctor_nombre: pm[n.doctor_id] || "Dr." })));
+    }
   }
 
   async function loadPerfil(uid: string) {
@@ -869,6 +886,31 @@ export default function PatientDashboard() {
                     </div>
                   </Card>
                 ))}
+              </div>
+            )}
+
+            {notasCompartidas.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-bold text-foreground mb-3 flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4 text-blue-600" /> Notas Clínicas Compartidas
+                </h3>
+                <div className="space-y-3">
+                  {notasCompartidas.map((nota: any) => (
+                    <Card key={nota.id} className="border border-border/50 shadow-sm rounded-2xl">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <p className="font-bold text-foreground text-sm">{nota.doctor_nombre}</p>
+                            <p className="text-xs text-muted-foreground">{new Date(nota.created_at).toLocaleDateString("es-GT", { day: "numeric", month: "short", year: "numeric" })}</p>
+                          </div>
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium capitalize">{nota.plantilla || "Consulta"}</span>
+                        </div>
+                        {nota.diagnostico && <p className="text-sm text-foreground font-medium mb-1">{nota.diagnostico}</p>}
+                        {nota.plan_tratamiento && <p className="text-xs text-muted-foreground line-clamp-2">{nota.plan_tratamiento}</p>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             )}
           </div>

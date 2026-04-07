@@ -39,6 +39,7 @@ import Feed from "./pages/Feed";
 import Expediente from "./pages/Expediente";
 import RecetaVerificacion from "./pages/RecetaVerificacion";
 import SintomaChecker from "./pages/SintomaChecker";
+import NotasClinicas from "./pages/NotasClinicas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -85,6 +86,7 @@ const App = () => (
               <Route path="/expediente" element={<Expediente />} />
               <Route path="/receta/:qr_code" element={<RecetaVerificacion />} />
               <Route path="/sintomas" element={<SintomaChecker />} />
+              <Route path="/notas-clinicas" element={<NotasClinicas />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ViewProvider>

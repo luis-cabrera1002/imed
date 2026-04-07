@@ -11,7 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import {
   User, Calendar, DollarSign, Star, Clock, CheckCircle, XCircle, Brain,
   AlertCircle, TrendingUp, Users, Stethoscope, MapPin, Phone,
-  Edit, Save, LogOut, ChevronRight, Activity, FileText, Plus, X, QrCode, ClipboardList
+  Edit, Save, LogOut, ChevronRight, Activity, FileText, Plus, X, QrCode, ClipboardList,
+  FileEdit
 } from "lucide-react";
 
 const ESPECIALIDADES = [
@@ -37,6 +38,7 @@ export default function DoctorDashboard() {
   const [citas, setCitas] = useState([]);
   const [opiniones, setOpiniones] = useState([]);
   const [recetas, setRecetas] = useState([]);
+  const [notasDashboard, setNotasDashboard] = useState([]);
   const [activeTab, setActiveTab] = useState("inicio");
   const [showRecetaForm, setShowRecetaForm] = useState(false);
   const [recetaForm, setRecetaForm] = useState({ paciente_id: "", medicamentos: [{ nombre: "", dosis: "", frecuencia: "", duracion: "", instrucciones: "" }], notas: "" });
@@ -56,7 +58,7 @@ export default function DoctorDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { navigate("/auth"); return; }
     setUser(user);
-    await Promise.all([loadPerfil(user.id), loadCitas(user.id), loadOpiniones(user.id), loadFullName(user.id), loadRecetas(user.id)]);
+    await Promise.all([loadPerfil(user.id), loadCitas(user.id), loadOpiniones(user.id), loadFullName(user.id), loadRecetas(user.id), loadNotasDashboard(user.id)]);
     setLoading(false);
   }
 
@@ -104,6 +106,22 @@ export default function DoctorDashboard() {
   async function loadOpiniones(userId) {
     const { data } = await supabase.from("opiniones").select("*").eq("doctor_id", userId).order("created_at", { ascending: false });
     if (data) setOpiniones(data);
+  }
+
+  async function loadNotasDashboard(userId) {
+    const { data } = await supabase
+      .from("notas_clinicas")
+      .select("id, paciente_id, diagnostico, created_at, plantilla")
+      .eq("doctor_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (data) {
+      const pIds = [...new Set(data.map(n => n.paciente_id))];
+      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name").in("user_id", pIds);
+      const pm = {};
+      (profiles || []).forEach(p => { pm[p.user_id] = p.full_name; });
+      setNotasDashboard(data.map(n => ({ ...n, paciente_nombre: pm[n.paciente_id] || "Paciente" })));
+    }
   }
 
   async function savePerfil() {
@@ -210,10 +228,10 @@ export default function DoctorDashboard() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-4 flex gap-1">
-          {["inicio","citas","recetas","opiniones","perfil"].map(tab => (
+          {["inicio","citas","recetas","notas","opiniones","perfil"].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-800"}`}>
-              {tab === "inicio" ? "Inicio" : tab === "citas" ? `Citas (${citas.length})` : tab === "recetas" ? `Recetas (${recetas.length})` : tab === "opiniones" ? `Reseñas (${opiniones.length})` : "Mi Perfil"}
+              {tab === "inicio" ? "Inicio" : tab === "citas" ? `Citas (${citas.length})` : tab === "recetas" ? `Recetas (${recetas.length})` : tab === "notas" ? `Mis Notas (${notasDashboard.length})` : tab === "opiniones" ? `Reseñas (${opiniones.length})` : "Mi Perfil"}
             </button>
           ))}
         </div>
@@ -369,6 +387,10 @@ export default function DoctorDashboard() {
                             <Button size="sm" variant="outline" className="text-xs h-7 px-2 gap-1 border-gray-200" onClick={() => navigate(`/expediente?patient_id=${c.paciente_id}`)}>
                               <ClipboardList className="w-3 h-3"/> Expediente
                             </Button>
+                            <Button size="sm" variant="outline" className="text-xs h-7 px-2 gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                              onClick={() => navigate(`/notas-clinicas?cita_id=${c.id}&paciente_id=${c.paciente_id}&paciente_nombre=${encodeURIComponent(c.paciente_nombre)}`)}>
+                              <FileEdit className="w-3 h-3"/> Nueva Nota
+                            </Button>
                           </div>
                         </div>
                       </CardContent>
@@ -470,6 +492,55 @@ export default function DoctorDashboard() {
                             {(r.medicamentos||[]).length > 3 && <span className="text-xs text-gray-400">+{r.medicamentos.length-3} más</span>}
                           </div>
                         </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "notas" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-gray-900">Notas Clínicas</h2>
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" onClick={() => navigate("/notas-clinicas")}>
+                <FileEdit className="w-3.5 h-3.5"/> Abrir Editor
+              </Button>
+            </div>
+            {notasDashboard.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <FileEdit className="w-12 h-12 mx-auto mb-3 opacity-30"/>
+                <p className="font-medium">No has creado notas clínicas aún</p>
+                <p className="text-sm mt-1">Creá una nota desde una cita o desde el editor</p>
+                <Button size="sm" className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" onClick={() => navigate("/notas-clinicas")}>
+                  <FileEdit className="w-3.5 h-3.5"/> Crear primera nota
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {notasDashboard.map(nota => (
+                  <Card key={nota.id} className="border-0 shadow-sm">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-bold text-emerald-700">{(nota.paciente_nombre||"P")[0]}</span>
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900 text-sm">{nota.paciente_nombre}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{nota.diagnostico || "Sin diagnóstico"}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-400">{new Date(nota.created_at).toLocaleDateString("es-GT", { day: "numeric", month: "short", year: "numeric" })}</span>
+                              <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full capitalize">{nota.plantilla || "general"}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Button size="sm" variant="outline" className="text-xs h-7 px-2 gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                          onClick={() => navigate(`/notas-clinicas?nota_id=${nota.id}`)}>
+                          <FileEdit className="w-3 h-3"/> Editar
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>

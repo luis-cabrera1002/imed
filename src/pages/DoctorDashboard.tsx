@@ -92,7 +92,7 @@ export default function DoctorDashboard() {
   }
 
   async function loadRecetas(userId) {
-    const { data } = await supabase.from("recetas_digitales").select("*, paciente:paciente_id(full_name:profiles(full_name))").eq("doctor_id", userId).order("created_at", { ascending: false });
+    const { data } = await supabase.from("recetas_digitales").select("*").eq("doctor_id", userId).order("created_at", { ascending: false });
     if (data) {
       // Fetch patient names separately
       const pIds = [...new Set(data.map(r => r.paciente_id))];

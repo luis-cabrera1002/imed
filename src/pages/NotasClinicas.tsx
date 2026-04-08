@@ -458,15 +458,16 @@ export default function NotasClinicas() {
   const [noaResult, setNoaResult] = useState<Record<string, string> | null>(null);
   const [noaChunkPending, setNoaChunkPending] = useState(false);
 
-  const recorderRef  = useRef<MediaRecorder | null>(null);
-  const streamRef    = useRef<MediaStream | null>(null);
-  const chunksRef    = useRef<Blob[]>([]);
-  const canvasRef    = useRef<HTMLCanvasElement | null>(null);
-  const analyserRef  = useRef<AnalyserNode | null>(null);
-  const animFrameRef = useRef<number | null>(null);
-  const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-  const transcriptRef = useRef("");
+  const recorderRef       = useRef<MediaRecorder | null>(null);
+  const streamRef         = useRef<MediaStream | null>(null);
+  const chunksRef         = useRef<Blob[]>([]);
+  const canvasRef         = useRef<HTMLCanvasElement | null>(null);
+  const analyserRef       = useRef<AnalyserNode | null>(null);
+  const animFrameRef      = useRef<number | null>(null);
+  const timerRef          = useRef<ReturnType<typeof setInterval> | null>(null);
+  const transcriptRef     = useRef("");
   const transcriptPanelRef = useRef<HTMLDivElement | null>(null);
+  const chunkPendingRef   = useRef(false); // ref version of noaChunkPending for closures
 
   function openNoa() {
     setNoaOpen(true);
@@ -474,8 +475,10 @@ export default function NotasClinicas() {
     setNoaTimer(0);
     setLiveTranscript("");
     setNoaResult(null);
+    setNoaChunkPending(false);
     transcriptRef.current = "";
     chunksRef.current = [];
+    chunkPendingRef.current = false;
   }
 
   function closeNoa() {
@@ -521,6 +524,7 @@ export default function NotasClinicas() {
   async function transcribeBlob(blob: Blob) {
     if (blob.size < 1000) return; // skip tiny/empty chunks
     setNoaChunkPending(true);
+    chunkPendingRef.current = true;
     try {
       const ab = await blob.arrayBuffer();
       const bytes = new Uint8Array(ab);
@@ -546,6 +550,7 @@ export default function NotasClinicas() {
       console.error("transcribe chunk error:", e);
     }
     setNoaChunkPending(false);
+    chunkPendingRef.current = false;
   }
 
   async function startRecording() {
@@ -585,20 +590,40 @@ export default function NotasClinicas() {
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
-          // Transcribe each 30s chunk as it arrives
+          // Live transcript: transcribe 30s chunks as they arrive
           transcribeBlob(e.data);
         }
       };
 
       recorder.onstop = async () => {
-        // If there's accumulated but un-transcribed data (shouldn't happen with timeslice)
-        // wait a tick for last transcription, then analyze
-        setNoaState("analyzing");
-        await new Promise(r => setTimeout(r, 500));
+        // Stop stream tracks AFTER recorder stops to ensure last chunk is captured
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
+        }
+
+        setNoaState("transcribing");
+
+        // Wait for any in-flight chunk transcription started by ondataavailable (max 8s)
+        // This covers the case where the last chunk just fired before onstop
+        let waited = 0;
+        while (chunkPendingRef.current && waited < 8000) {
+          await new Promise(r => setTimeout(r, 200));
+          waited += 200;
+        }
+
+        // If still no transcript (recording < 30s AND final chunk was too small),
+        // transcribe the full accumulated blob as a single request
+        if (chunksRef.current.length > 0 && !transcriptRef.current.trim()) {
+          const mimeUsed = recorder.mimeType || supportedMime || "audio/webm";
+          const fullBlob = new Blob(chunksRef.current, { type: mimeUsed });
+          await transcribeBlob(fullBlob);
+        }
+
         await analyzeTranscript();
       };
 
-      recorder.start(30000); // emit chunk every 30s
+      recorder.start(30000); // emit live chunk every 30s for real-time transcript
 
       setNoaState("recording");
       setNoaTimer(0);
@@ -615,10 +640,12 @@ export default function NotasClinicas() {
   function stopRecording() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     if (animFrameRef.current) { cancelAnimationFrame(animFrameRef.current); animFrameRef.current = null; }
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
+    // NOTE: stream tracks are stopped inside recorder.onstop to ensure last chunk fires first
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
-      setNoaState("transcribing");
-      recorderRef.current.stop();
+      recorderRef.current.stop(); // triggers ondataavailable (last chunk) then onstop
+    } else if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
     }
   }
 

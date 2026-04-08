@@ -100,8 +100,8 @@ export default function InvestorsDashboard() {
 
       if (!user) { navigate("/auth"); return; }
 
-      const email = user.email ?? "";
-      if (!ALLOWED_EMAILS.includes(email)) { navigate("/"); return; }
+      const email = (user.email ?? "").toLowerCase();
+      if (!ALLOWED_EMAILS.map(e => e.toLowerCase()).includes(email)) { navigate("/"); return; }
 
       setAuthorized(true);
       await fetchMetrics();

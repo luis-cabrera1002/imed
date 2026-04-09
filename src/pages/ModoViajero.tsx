@@ -35,7 +35,92 @@ const MEDICINE_DB: Record<string, any> = {
       { pais: "🇧🇷 Brasil", nombre: "Aerolin / Salbulair", laboratorio: "GSK / Aché" },
       { pais: "🇪🇸 España", nombre: "Ventolin / Salbutamol EFG", laboratorio: "GSK / Genérico" },
     ]
-  }
+  },
+  "Metformina": {
+    nombre: "Metformina", ingredienteActivo: "Clorhidrato de Metformina", emoji: "🟡",
+    equivalentes: [
+      { pais: "🇺🇸 EE.UU.", nombre: "Glucophage / Fortamet", laboratorio: "Bristol-Myers Squibb / Shionogi" },
+      { pais: "🇪🇸 España", nombre: "Dianben / Metformina EFG", laboratorio: "Merck / Genérico" },
+      { pais: "🇲🇽 México", nombre: "Glucophage / Glafornil", laboratorio: "Merck / Silanes" },
+      { pais: "🇨🇴 Colombia", nombre: "Glucophage / Metformina MK", laboratorio: "Merck / Tecnoquímicas" },
+      { pais: "🇦🇷 Argentina", nombre: "Glucophage / Metral", laboratorio: "Merck / Raffo" },
+      { pais: "🇧🇷 Brasil", nombre: "Glifage / Glucoformin", laboratorio: "Merck / Sanofi" },
+      { pais: "🇬🇧 Reino Unido", nombre: "Glucophage / Metformin HCl", laboratorio: "Merck / Genérico" },
+      { pais: "🇨🇦 Canadá", nombre: "Glucophage / Glumetza", laboratorio: "Merck / Santarus" },
+    ]
+  },
+  "Losartán": {
+    nombre: "Losartán", ingredienteActivo: "Losartán Potásico", emoji: "🔴",
+    equivalentes: [
+      { pais: "🇺🇸 EE.UU.", nombre: "Cozaar / Losartan generic", laboratorio: "Merck / Teva" },
+      { pais: "🇪🇸 España", nombre: "Cozaar / Losartán EFG", laboratorio: "Merck / Genérico" },
+      { pais: "🇲🇽 México", nombre: "Cozaar / Losartan MK", laboratorio: "Merck / Tecnoquímicas" },
+      { pais: "🇦🇷 Argentina", nombre: "Cozaar / Losaprex", laboratorio: "Merck / Gador" },
+      { pais: "🇨🇴 Colombia", nombre: "Cozaar / Losartan MK", laboratorio: "Merck / Tecnoquímicas" },
+      { pais: "🇧🇷 Brasil", nombre: "Cozaar / Losartec", laboratorio: "Merck / EMS" },
+      { pais: "🇬🇧 Reino Unido", nombre: "Cozaar / Losartan generic", laboratorio: "Merck / Sandoz" },
+    ]
+  },
+  "Omeprazol": {
+    nombre: "Omeprazol", ingredienteActivo: "Omeprazol", emoji: "🟠",
+    equivalentes: [
+      { pais: "🇺🇸 EE.UU.", nombre: "Prilosec / Zegerid", laboratorio: "AstraZeneca / Santarus" },
+      { pais: "🇪🇸 España", nombre: "Losec / Omeprazol EFG", laboratorio: "AstraZeneca / Genérico" },
+      { pais: "🇲🇽 México", nombre: "Losec / Prilosec", laboratorio: "AstraZeneca" },
+      { pais: "🇦🇷 Argentina", nombre: "Losec / Ulcozol", laboratorio: "AstraZeneca / Gador" },
+      { pais: "🇨🇴 Colombia", nombre: "Losec / Omeprazol MK", laboratorio: "AstraZeneca / Tecnoquímicas" },
+      { pais: "🇧🇷 Brasil", nombre: "Losec / Omeprazol genérico", laboratorio: "AstraZeneca / EMS" },
+      { pais: "🇬🇧 Reino Unido", nombre: "Losec / Omeprazole generic", laboratorio: "AstraZeneca / Sandoz" },
+    ]
+  },
+  "Atorvastatina": {
+    nombre: "Atorvastatina", ingredienteActivo: "Atorvastatina Cálcica", emoji: "🟤",
+    equivalentes: [
+      { pais: "🇺🇸 EE.UU.", nombre: "Lipitor / Atorvastatin generic", laboratorio: "Pfizer / Teva" },
+      { pais: "🇪🇸 España", nombre: "Cardyl / Atorvastatina EFG", laboratorio: "Pfizer / Genérico" },
+      { pais: "🇲🇽 México", nombre: "Lipitor / Liparex", laboratorio: "Pfizer / Asofarma" },
+      { pais: "🇦🇷 Argentina", nombre: "Lipitor / Atorvar", laboratorio: "Pfizer / Roemmers" },
+      { pais: "🇨🇴 Colombia", nombre: "Lipitor / Atorvastatina MK", laboratorio: "Pfizer / Tecnoquímicas" },
+      { pais: "🇧🇷 Brasil", nombre: "Lipitor / Citalor", laboratorio: "Pfizer / EMS" },
+      { pais: "🇬🇧 Reino Unido", nombre: "Lipitor / Atorvastatin generic", laboratorio: "Pfizer / Sandoz" },
+    ]
+  },
+  "Amoxicilina": {
+    nombre: "Amoxicilina", ingredienteActivo: "Amoxicilina Trihidrato", emoji: "🟢",
+    equivalentes: [
+      { pais: "🇺🇸 EE.UU.", nombre: "Amoxil / Trimox", laboratorio: "GSK / Apothecon" },
+      { pais: "🇪🇸 España", nombre: "Amoxicilina EFG / Clamoxyl", laboratorio: "GSK / Genérico" },
+      { pais: "🇲🇽 México", nombre: "Trimox / Amoxicilina MK", laboratorio: "Bristol / Tecnoquímicas" },
+      { pais: "🇦🇷 Argentina", nombre: "Amoxidal / Amoxicilina genérico", laboratorio: "Roemmers / Genérico" },
+      { pais: "🇨🇴 Colombia", nombre: "Amoxicilina MK / Amoxidal", laboratorio: "Tecnoquímicas / Roemmers" },
+      { pais: "🇧🇷 Brasil", nombre: "Amoxil / Novocilin", laboratorio: "GSK / Medley" },
+      { pais: "🇬🇧 Reino Unido", nombre: "Amoxil / Amoxicillin generic", laboratorio: "GSK / Sandoz" },
+    ]
+  },
+  "Ibuprofeno": {
+    nombre: "Ibuprofeno", ingredienteActivo: "Ibuprofeno", emoji: "🔶",
+    equivalentes: [
+      { pais: "🇺🇸 EE.UU.", nombre: "Advil / Motrin", laboratorio: "Pfizer / Johnson & Johnson" },
+      { pais: "🇪🇸 España", nombre: "Nurofen / Ibuprofeno EFG", laboratorio: "Reckitt / Genérico" },
+      { pais: "🇲🇽 México", nombre: "Advil / Motrin", laboratorio: "Pfizer / Johnson & Johnson" },
+      { pais: "🇦🇷 Argentina", nombre: "Advil / Ibupirac", laboratorio: "Pfizer / Roemmers" },
+      { pais: "🇨🇴 Colombia", nombre: "Advil / Ibuprofeno MK", laboratorio: "Pfizer / Tecnoquímicas" },
+      { pais: "🇧🇷 Brasil", nombre: "Advil / Motrin", laboratorio: "Pfizer / Johnson & Johnson" },
+      { pais: "🇬🇧 Reino Unido", nombre: "Nurofen / Ibuprofen generic", laboratorio: "Reckitt / Sandoz" },
+    ]
+  },
+  "Clonazepam": {
+    nombre: "Clonazepam", ingredienteActivo: "Clonazepam", emoji: "🟣",
+    equivalentes: [
+      { pais: "🇺🇸 EE.UU.", nombre: "Klonopin / Clonazepam generic", laboratorio: "Roche / Teva" },
+      { pais: "🇪🇸 España", nombre: "Rivotril / Clonazepam EFG", laboratorio: "Roche / Genérico" },
+      { pais: "🇲🇽 México", nombre: "Rivotril / Clonazepam Roche", laboratorio: "Roche" },
+      { pais: "🇦🇷 Argentina", nombre: "Rivotril / Clonax", laboratorio: "Roche / Roemmers" },
+      { pais: "🇨🇴 Colombia", nombre: "Rivotril / Clonazepam MK", laboratorio: "Roche / Tecnoquímicas" },
+      { pais: "🇧🇷 Brasil", nombre: "Rivotril / Clonazepam genérico", laboratorio: "Roche / Sandoz" },
+      { pais: "🇬🇧 Reino Unido", nombre: "Rivotril / Clonazepam generic", laboratorio: "Roche / Sandoz" },
+    ]
+  },
 };
 
 export default function ModoViajero() {

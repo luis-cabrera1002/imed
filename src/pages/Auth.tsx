@@ -68,7 +68,14 @@ const Auth = () => {
     if (error) { setError("No se pudo actualizar la contraseña. Intentá de nuevo."); }
     else {
       setSuccess("¡Contraseña actualizada correctamente!");
-      setTimeout(() => navigate("/patient-dashboard"), 2000);
+      // Redirect to the role-appropriate dashboard
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (u) {
+        const { data: profile } = await supabase.from("profiles").select("role").eq("user_id", u.id).single();
+        setTimeout(() => navigate(getDashboardPath(profile?.role)), 2000);
+      } else {
+        setTimeout(() => navigate("/auth"), 2000);
+      }
     }
     setLoading(false);
   };
@@ -129,7 +136,6 @@ const Auth = () => {
                   {["Perfil público","Recibir pacientes","Gestionar citas"].map((f) => (<span key={f} className="text-xs bg-green-50 text-green-700 px-3 py-1 rounded-full font-medium">✓ {f}</span>))}
                 </div>
               </button>
-            </div>
               <button onClick={() => { resetForm(); setMode("register-pharmacy"); }} className="group w-full bg-white border-2 border-gray-200 hover:border-orange-400 rounded-2xl p-6 text-left transition-all duration-200 hover:shadow-lg">
                 <div className="flex items-center gap-5">
                   <div className="w-16 h-16 bg-orange-100 group-hover:bg-orange-200 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors"><Store className="w-8 h-8 text-orange-600" /></div>
@@ -143,6 +149,7 @@ const Auth = () => {
                   {["Ver demanda en tiempo real","Gestionar inventario","Conectar con pacientes"].map((f) => (<span key={f} className="text-xs bg-orange-50 text-orange-700 px-3 py-1 rounded-full font-medium">✓ {f}</span>))}
                 </div>
               </button>
+            </div>
             <div className="text-center">
               <p className="text-gray-500 text-sm mb-2">¿Ya tienes cuenta?</p>
               <button onClick={() => { resetForm(); setMode("login"); }} className="text-blue-600 hover:text-blue-800 font-semibold text-base underline underline-offset-2 transition-colors">Iniciar sesión</button>

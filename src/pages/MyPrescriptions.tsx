@@ -163,11 +163,17 @@ export default function MyPrescriptions() {
               <Card key={r.id} className="border-0 shadow-sm rounded-2xl overflow-hidden">
                 <CardContent className="p-5">
                   <div className="flex items-start gap-4">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + "/receta/" + r.qr_code)}`}
-                      alt="QR de receta"
-                      className="w-20 h-20 rounded-xl border border-gray-100 flex-shrink-0"
-                    />
+                    {r.qr_code ? (
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + "/receta/" + r.qr_code)}`}
+                        alt="QR de receta"
+                        className="w-20 h-20 rounded-xl border border-gray-100 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-xl border border-gray-100 bg-gray-50 flex items-center justify-center flex-shrink-0">
+                        <QrCode className="w-8 h-8 text-gray-300" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-1">
                         <div>

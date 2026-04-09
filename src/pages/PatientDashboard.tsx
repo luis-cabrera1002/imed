@@ -11,7 +11,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
   Search, User, Activity, LogOut, Star, Shield, Bell, Scan,
-  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, MessageCircle, Store, ClipboardList, Trophy, CheckCircle2, ArrowRight
+  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, MessageCircle, Store, ClipboardList, Trophy, CheckCircle2, ArrowRight, UserPlus
 } from "lucide-react";
 
 const ESTADO: Record<string, { label: string; color: string; dot: string }> = {
@@ -44,6 +44,7 @@ export default function PatientDashboard() {
   const [docLoading, setDocLoading]   = useState(false);
   const [expediente, setExpediente]   = useState<any>(null);
   const [recordatoriosCount, setRecordatoriosCount] = useState(0);
+  const [referencias, setReferencias] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
@@ -52,7 +53,7 @@ export default function PatientDashboard() {
 
   async function loadData(uid: string) {
     setLoading(true);
-    await Promise.all([loadPerfil(uid), loadCitas(uid), loadRecetas(uid), loadEscaneos(uid), loadDocumentos(uid), loadExpediente(uid), loadRecordatorios(uid), loadNotasCompartidas(uid)]);
+    await Promise.all([loadPerfil(uid), loadCitas(uid), loadRecetas(uid), loadEscaneos(uid), loadDocumentos(uid), loadExpediente(uid), loadRecordatorios(uid), loadNotasCompartidas(uid), loadReferencias(uid)]);
     setLoading(false);
   }
 
@@ -155,6 +156,21 @@ export default function PatientDashboard() {
       (profiles || []).forEach((p: any) => { pm[p.user_id] = p.full_name; });
       setNotasCompartidas(data.map((n: any) => ({ ...n, doctor_nombre: pm[n.doctor_id] || "Dr." })));
     }
+  }
+
+  async function loadReferencias(uid: string) {
+    const { data } = await supabase
+      .from("referencias_medicas")
+      .select("*")
+      .eq("paciente_id", uid)
+      .order("created_at", { ascending: false });
+    if (!data || data.length === 0) { setReferencias([]); return; }
+    const doctorIds = [...new Set(data.map((r: any) => r.doctor_origen_id))];
+    const { data: profiles } = await supabase.from("profiles").select("user_id, full_name").in("user_id", doctorIds);
+    setReferencias(data.map((r: any) => ({
+      ...r,
+      doctor_nombre: (profiles as any[])?.find(p => p.user_id === r.doctor_origen_id)?.full_name || "Doctor",
+    })));
   }
 
   async function loadPerfil(uid: string) {
@@ -502,6 +518,7 @@ export default function PatientDashboard() {
                       { label: "Feed Social",     sub: "Comunidad médica",   icon: TrendingUp, grad: "from-violet-500 to-purple-600",   path: "/feed" },
                       { label: "Mi Expediente",  sub: "Historial médico",   icon: ClipboardList, grad: "from-cyan-500 to-blue-600",    path: "/expediente" },
                       { label: "Síntoma Checker", sub: "Análisis con IA",  icon: Brain,         grad: "from-purple-500 to-indigo-600",  path: "/sintomas" },
+                      { label: "Diagnóstico IA",  sub: "Análisis de imágenes", icon: Eye,       grad: "from-rose-500 to-pink-600",       path: "/diagnostico-imagen" },
                     ].map(({ label, sub, icon: Icon, grad, path }) => (
                       <button key={label} onClick={() => navigate(path)}
                         className="group flex flex-col items-start p-3 bg-background hover:bg-muted/40 rounded-xl border border-border/50 hover:border-primary/20 transition-all text-left">
@@ -626,10 +643,51 @@ export default function PatientDashboard() {
                 })}
               </div>
             )}
+
+            {/* Referencias recibidas */}
+            {referencias.length > 0 && (
+              <div className="space-y-3 mt-2">
+                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-blue-600" />
+                  Referencias Médicas Recibidas
+                </h3>
+                {referencias.map((ref: any) => (
+                  <Card key={ref.id} className="border border-blue-100 shadow-sm bg-blue-50/40">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <UserPlus className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div>
+                              <p className="font-semibold text-foreground">{ref.especialidad_destino}</p>
+                              <p className="text-xs text-blue-600 font-medium">Referido por {ref.doctor_nombre}</p>
+                            </div>
+                            <Badge className={`text-xs border flex-shrink-0 ${ref.estado === "pendiente" ? "bg-yellow-100 text-yellow-700 border-yellow-200" : ref.estado === "completada" ? "bg-green-100 text-green-700 border-green-200" : "bg-blue-100 text-blue-700 border-blue-200"}`}>
+                              {ref.estado}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{ref.motivo}</p>
+                          {ref.nota_adicional && <p className="text-xs text-muted-foreground italic mt-0.5">{ref.nota_adicional}</p>}
+                          <div className="mt-3">
+                            <Button size="sm" className="text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white"
+                              onClick={() => navigate(`/doctores?especialidad=${encodeURIComponent(ref.especialidad_destino)}`)}>
+                              <Search className="w-3 h-3 mr-1" />Buscar {ref.especialidad_destino}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* ══════════ MIS RECETAS ══════════ */}
+
         {activeTab === "Mis Recetas" && (
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-foreground">Mis Recetas <span className="text-muted-foreground font-normal text-base">({recetas.length})</span></h2>

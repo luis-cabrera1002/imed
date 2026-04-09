@@ -12,7 +12,7 @@ import {
   User, Calendar, DollarSign, Star, Clock, CheckCircle, XCircle, Brain,
   AlertCircle, TrendingUp, Users, Stethoscope, MapPin, Phone,
   Edit, Save, LogOut, ChevronRight, Activity, FileText, Plus, X, QrCode, ClipboardList,
-  FileEdit
+  FileEdit, UserPlus, Scan
 } from "lucide-react";
 
 const ESPECIALIDADES = [
@@ -40,6 +40,14 @@ export default function DoctorDashboard() {
   const [recetas, setRecetas] = useState([]);
   const [notasDashboard, setNotasDashboard] = useState([]);
   const [activeTab, setActiveTab] = useState("inicio");
+
+  // Referencias médicas
+  const [showReferModal, setShowReferModal] = useState(false);
+  const [referCita, setReferCita] = useState<any | null>(null);
+  const [referEspecialidad, setReferEspecialidad] = useState("");
+  const [referMotivo, setReferMotivo] = useState("");
+  const [referNota, setReferNota] = useState("");
+  const [enviandoReferencia, setEnviandoReferencia] = useState(false);
   const [showRecetaForm, setShowRecetaForm] = useState(false);
   const [recetaForm, setRecetaForm] = useState({ paciente_id: "", medicamentos: [{ nombre: "", dosis: "", frecuencia: "", duracion: "", instrucciones: "" }], notas: "" });
   const [savingReceta, setSavingReceta] = useState(false);
@@ -170,6 +178,30 @@ export default function DoctorDashboard() {
     }
   }
 
+  async function crearReferencia() {
+    if (!user || !referCita || !referEspecialidad || !referMotivo) return;
+    setEnviandoReferencia(true);
+    const { error } = await supabase.from("referencias_medicas").insert({
+      doctor_origen_id: user.id,
+      paciente_id: referCita.paciente_id,
+      cita_id: referCita.id || null,
+      especialidad_destino: referEspecialidad,
+      motivo: referMotivo,
+      nota_adicional: referNota || null,
+    });
+    if (!error) {
+      toast({ title: "✅ Referencia enviada", description: `Referencia a ${referEspecialidad} enviada al paciente.` });
+      setShowReferModal(false);
+      setReferCita(null);
+      setReferEspecialidad("");
+      setReferMotivo("");
+      setReferNota("");
+    } else {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+    setEnviandoReferencia(false);
+  }
+
   async function getUbicacion() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -204,6 +236,7 @@ export default function DoctorDashboard() {
   );
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -220,6 +253,9 @@ export default function DoctorDashboard() {
             <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate("/")}>Ver App</Button>
             <Button size="sm" className="text-xs bg-purple-600 hover:bg-purple-700 text-white gap-1" onClick={() => navigate("/agenda-inteligente")}>
               <Brain className="w-3 h-3"/> Agenda IA
+            </Button>
+            <Button size="sm" variant="outline" className="text-xs gap-1 border-indigo-200 text-indigo-700 hover:bg-indigo-50" onClick={() => navigate("/diagnostico-imagen")}>
+              <Scan className="w-3 h-3"/> Diagnóstico IA
             </Button>
             <Button variant="outline" size="sm" className="text-xs text-red-600 border-red-200 hover:bg-red-50"
               onClick={async () => { await supabase.auth.signOut(); navigate("/auth"); }}>
@@ -390,6 +426,10 @@ export default function DoctorDashboard() {
                             <Button size="sm" variant="outline" className="text-xs h-7 px-2 gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                               onClick={() => navigate(`/notas-clinicas?cita_id=${c.id}&paciente_id=${c.paciente_id}&paciente_nombre=${encodeURIComponent(c.paciente_nombre)}`)}>
                               <FileEdit className="w-3 h-3"/> Nueva Nota
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-xs h-7 px-2 gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                              onClick={() => { setReferCita(c); setShowReferModal(true); }}>
+                              <UserPlus className="w-3 h-3"/> Referir
                             </Button>
                           </div>
                         </div>
@@ -687,5 +727,86 @@ export default function DoctorDashboard() {
         )}
       </div>
     </div>
+
+    {/* ── Modal: Referir Paciente ── */}
+
+    {showReferModal && referCita && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b">
+            <div className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-blue-600" />
+              <h3 className="font-bold text-gray-900">Referir Paciente</h3>
+            </div>
+            <button onClick={() => setShowReferModal(false)} className="text-gray-400 hover:text-gray-600">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="bg-blue-50 rounded-xl px-4 py-3">
+              <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mb-0.5">Paciente</p>
+              <p className="font-bold text-blue-900">{referCita.paciente_nombre}</p>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                Especialidad de destino *
+              </label>
+              <select
+                value={referEspecialidad}
+                onChange={e => setReferEspecialidad(e.target.value)}
+                className="w-full h-10 border border-gray-200 rounded-xl px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
+              >
+                <option value="">— Seleccioná una especialidad —</option>
+                {ESPECIALIDADES.map(e => <option key={e} value={e}>{e}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                Motivo de la referencia *
+              </label>
+              <textarea
+                value={referMotivo}
+                onChange={e => setReferMotivo(e.target.value)}
+                rows={3}
+                placeholder="Describí el motivo clínico de la referencia..."
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                Nota adicional (opcional)
+              </label>
+              <textarea
+                value={referNota}
+                onChange={e => setReferNota(e.target.value)}
+                rows={2}
+                placeholder="Información adicional para el especialista..."
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setShowReferModal(false)}
+                className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <Button
+                className="flex-1 h-11 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={crearReferencia}
+                disabled={enviandoReferencia || !referEspecialidad || !referMotivo}
+              >
+                {enviandoReferencia ? "Enviando..." : "Enviar Referencia"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

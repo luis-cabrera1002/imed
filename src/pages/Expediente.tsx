@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { functionsClient } from "@/integrations/supabase/functionsClient";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Heart, Pill, AlertTriangle, Droplets, Weight, Ruler,
-  Plus, X, Save, Edit2, ClipboardList, ArrowLeft, User
+  Plus, X, Save, Edit2, ClipboardList, ArrowLeft, User,
+  ShieldAlert, ShieldCheck, Clock,
 } from "lucide-react";
+import CardiovascularRisk from "@/components/CardiovascularRisk";
 
 interface Expediente {
   condiciones: string[];
@@ -108,6 +111,10 @@ export default function Expediente() {
   const [isDoctor, setIsDoctor] = useState(false);
   const readOnly = !!(patientId); // doctor view is read-only
 
+  // Drug interactions for medicamentos_activos
+  const [loadingInteracciones, setLoadingInteracciones] = useState(false);
+  const [interacciones, setInteracciones] = useState<any | null>(null);
+
   useEffect(() => {
     init();
   }, []);
@@ -173,6 +180,22 @@ export default function Expediente() {
   function cancel() {
     setExpediente(original);
     setEditing(false);
+  }
+
+  async function verificarInteraccionesExpediente() {
+    const meds = expediente.medicamentos_activos.join(", ");
+    if (!meds.trim()) return;
+    setLoadingInteracciones(true);
+    setInteracciones(null);
+    try {
+      const { data } = await functionsClient.functions.invoke("drug-interactions", {
+        body: { medicamentos: meds },
+      });
+      setInteracciones(data);
+    } catch (e) {
+      console.error("drug-interactions error:", e);
+    }
+    setLoadingInteracciones(false);
   }
 
   function listOp(field: keyof Expediente, op: "add" | "remove", val?: string, idx?: number) {
@@ -351,11 +374,66 @@ export default function Expediente() {
                 icon={Pill}
                 color="text-blue-500"
                 items={expediente.medicamentos_activos}
-                onAdd={v => listOp("medicamentos_activos", "add", v)}
-                onRemove={i => listOp("medicamentos_activos", "remove", undefined, i)}
+                onAdd={v => { listOp("medicamentos_activos", "add", v); setInteracciones(null); }}
+                onRemove={i => { listOp("medicamentos_activos", "remove", undefined, i); setInteracciones(null); }}
                 placeholder="Ej: Metformina 850mg, Losartán 50mg..."
                 readOnly={readOnly || !editing}
               />
+
+              {/* Drug interactions checker */}
+              {expediente.medicamentos_activos.length >= 2 && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <button
+                    onClick={verificarInteraccionesExpediente}
+                    disabled={loadingInteracciones}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+                  >
+                    {loadingInteracciones
+                      ? <><Clock className="w-3 h-3 animate-spin" /> Verificando...</>
+                      : <><ShieldAlert className="w-3 h-3" /> Verificar interacciones entre medicamentos</>}
+                  </button>
+
+                  {interacciones && (
+                    <div className="mt-2 space-y-2">
+                      {interacciones.interacciones_graves?.length > 0 && (
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <ShieldAlert className="w-3.5 h-3.5 text-red-600" />
+                            <span className="text-xs font-bold text-red-700">Interacciones Graves</span>
+                          </div>
+                          {interacciones.interacciones_graves.map((i: any, idx: number) => (
+                            <div key={idx} className="mb-1">
+                              <p className="text-xs font-semibold text-red-800">{i.medicamentos}</p>
+                              <p className="text-xs text-red-700">{i.descripcion}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {interacciones.interacciones_moderadas?.length > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-yellow-600" />
+                            <span className="text-xs font-bold text-yellow-700">Interacciones Moderadas</span>
+                          </div>
+                          {interacciones.interacciones_moderadas.map((i: any, idx: number) => (
+                            <div key={idx} className="mb-1">
+                              <p className="text-xs font-semibold text-yellow-800">{i.medicamentos}</p>
+                              <p className="text-xs text-yellow-700">{i.descripcion}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {interacciones.sin_interacciones_conocidas && (
+                        <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 flex items-center gap-2">
+                          <ShieldCheck className="w-3.5 h-3.5 text-green-600" />
+                          <span className="text-xs text-green-700">Sin interacciones conocidas.</span>
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-400 italic">{interacciones.disclaimer}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -381,6 +459,14 @@ export default function Expediente() {
             )}
           </CardContent>
         </Card>
+
+        {/* Cardiovascular Risk Calculator */}
+        <div className="mt-4">
+          <CardiovascularRisk
+            isDiabetico={expediente.condiciones.some(c => c.toLowerCase().includes("diabetes"))}
+            defaultCollapsed
+          />
+        </div>
 
         {/* Save button for mobile (floating at bottom) */}
         {editing && !readOnly && (

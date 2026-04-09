@@ -12,7 +12,9 @@ import {
   Stethoscope, Sparkles, CheckCircle, Clock, AlertCircle,
   X, ChevronDown, User, Lock, Calendar, Clipboard,
   ArrowLeft, Brain, Mic, MicOff, Radio, Wand2,
+  ShieldAlert, ShieldCheck, Pill,
 } from "lucide-react";
+import CardiovascularRisk from "@/components/CardiovascularRisk";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Built-in templates (hardcoded in JS)
@@ -138,6 +140,10 @@ export default function NotasClinicas() {
   // Custom templates (from DB)
   const [plantillasCustom, setPlantillasCustom] = useState<any[]>([]);
   const [showPlantillaDropdown, setShowPlantillaDropdown] = useState(false);
+
+  // Drug interactions
+  const [loadingInteracciones, setLoadingInteracciones] = useState(false);
+  const [interacciones, setInteracciones] = useState<any | null>(null);
 
   // ── Auth check ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -444,6 +450,28 @@ export default function NotasClinicas() {
   // ── Print ─────────────────────────────────────────────────────────────────
   function printNota() {
     window.print();
+  }
+
+  // ── Drug interactions ─────────────────────────────────────────────────────
+  async function verificarInteracciones() {
+    const meds = form.medicamentos_recetados.trim();
+    if (!meds) {
+      toast({ title: "Sin medicamentos", description: "Escribí los medicamentos recetados primero.", variant: "destructive" });
+      return;
+    }
+    setLoadingInteracciones(true);
+    setInteracciones(null);
+    try {
+      const { data, error } = await functionsClient.functions.invoke("drug-interactions", {
+        body: { medicamentos: meds },
+      });
+      if (error) throw error;
+      setInteracciones(data);
+    } catch (e) {
+      console.error("drug-interactions error:", e);
+      toast({ title: "Error al verificar", description: "No se pudo consultar la IA. Intentá de nuevo.", variant: "destructive" });
+    }
+    setLoadingInteracciones(false);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -1062,16 +1090,71 @@ export default function NotasClinicas() {
 
                     {/* Medicamentos */}
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">
-                        Medicamentos Recetados
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          Medicamentos Recetados
+                        </label>
+                        <button
+                          onClick={verificarInteracciones}
+                          disabled={loadingInteracciones || !form.medicamentos_recetados.trim()}
+                          className="flex items-center gap-1 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2 py-1 rounded-lg transition-colors disabled:opacity-40 no-print"
+                        >
+                          {loadingInteracciones
+                            ? <><Clock className="w-3 h-3 animate-spin" /> Verificando...</>
+                            : <><ShieldAlert className="w-3 h-3" /> Verificar interacciones</>}
+                        </button>
+                      </div>
                       <Textarea
                         rows={3}
                         value={form.medicamentos_recetados}
-                        onChange={e => handleFormChange("medicamentos_recetados", e.target.value)}
+                        onChange={e => { handleFormChange("medicamentos_recetados", e.target.value); setInteracciones(null); }}
                         placeholder="Medicamentos, dosis e instrucciones..."
                         className="text-sm resize-none rounded-xl"
                       />
+
+                      {/* Drug interactions result */}
+                      {interacciones && (
+                        <div className="mt-2 space-y-2 no-print">
+                          {interacciones.interacciones_graves?.length > 0 && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <ShieldAlert className="w-3.5 h-3.5 text-red-600" />
+                                <span className="text-xs font-bold text-red-700 uppercase">Interacciones Graves ({interacciones.interacciones_graves.length})</span>
+                              </div>
+                              {interacciones.interacciones_graves.map((i: any, idx: number) => (
+                                <div key={idx} className="mb-1.5">
+                                  <p className="text-xs font-semibold text-red-800">{i.medicamentos}</p>
+                                  <p className="text-xs text-red-700">{i.descripcion}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {interacciones.interacciones_moderadas?.length > 0 && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <AlertCircle className="w-3.5 h-3.5 text-yellow-600" />
+                                <span className="text-xs font-bold text-yellow-700 uppercase">Interacciones Moderadas ({interacciones.interacciones_moderadas.length})</span>
+                              </div>
+                              {interacciones.interacciones_moderadas.map((i: any, idx: number) => (
+                                <div key={idx} className="mb-1.5">
+                                  <p className="text-xs font-semibold text-yellow-800">{i.medicamentos}</p>
+                                  <p className="text-xs text-yellow-700">{i.descripcion}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {interacciones.sin_interacciones_conocidas && (
+                            <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 flex items-center gap-2">
+                              <ShieldCheck className="w-3.5 h-3.5 text-green-600" />
+                              <span className="text-xs text-green-700 font-semibold">Sin interacciones conocidas entre los medicamentos listados.</span>
+                            </div>
+                          )}
+                          {interacciones.recomendaciones && (
+                            <p className="text-xs text-gray-500 px-1">{interacciones.recomendaciones}</p>
+                          )}
+                          <p className="text-xs text-gray-400 px-1 italic">{interacciones.disclaimer}</p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Próxima cita */}
@@ -1099,6 +1182,11 @@ export default function NotasClinicas() {
                         placeholder="Observaciones privadas, recordatorios internos..."
                         className="text-sm resize-none rounded-xl bg-amber-50 border-amber-200 focus:ring-amber-200 no-print"
                       />
+                    </div>
+
+                    {/* ── Cardiovascular Risk ── */}
+                    <div className="no-print">
+                      <CardiovascularRisk defaultCollapsed />
                     </div>
 
                     {/* ── AI Section ── */}

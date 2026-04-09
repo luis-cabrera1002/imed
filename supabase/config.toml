@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.analyze-consulta]
 verify_jwt = false
+
+[functions.image-diagnosis]
+verify_jwt = false
+
+[functions.drug-interactions]
+verify_jwt = false

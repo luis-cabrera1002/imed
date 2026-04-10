@@ -15,6 +15,7 @@ import {
   ShieldAlert, ShieldCheck, Pill,
 } from "lucide-react";
 import CardiovascularRisk from "@/components/CardiovascularRisk";
+import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Built-in templates (hardcoded in JS)
@@ -798,6 +799,11 @@ export default function NotasClinicas() {
             </div>
             <span className="font-bold text-gray-900">Notas Clínicas</span>
           </div>
+        </div>
+
+        {/* Medical disclaimer */}
+        <div className="px-4 py-2 border-b bg-amber-50 no-print">
+          <MedicalDisclaimer compact />
         </div>
 
         <div className="flex flex-1 overflow-hidden">

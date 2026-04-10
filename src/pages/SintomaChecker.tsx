@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { functionsClient } from "@/integrations/supabase/functionsClient";
 import Header from "@/components/Header";
+import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -75,11 +76,8 @@ export default function SintomaChecker() {
         </div>
 
         {/* Disclaimer */}
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-6">
-          <Info className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-amber-800">
-            <strong>Aviso importante:</strong> Esta herramienta es solo orientativa y no reemplaza la consulta con un médico. Ante síntomas graves, acudí a emergencias de inmediato.
-          </p>
+        <div className="mb-6">
+          <MedicalDisclaimer />
         </div>
 
         {/* Input */}

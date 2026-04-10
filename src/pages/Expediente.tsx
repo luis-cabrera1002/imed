@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { functionsClient } from "@/integrations/supabase/functionsClient";
 import Header from "@/components/Header";
+import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -226,6 +227,11 @@ export default function Expediente() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="max-w-3xl mx-auto px-4 py-8">
+
+        {/* Medical disclaimer */}
+        <div className="mb-5">
+          <MedicalDisclaimer compact />
+        </div>
 
         {/* Page header */}
         <div className="flex items-center gap-3 mb-6">

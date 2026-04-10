@@ -42,6 +42,10 @@ import SintomaChecker from "./pages/SintomaChecker";
 import NotasClinicas from "./pages/NotasClinicas";
 import DiagnosticoImagen from "./pages/DiagnosticoImagen";
 import NotFound from "./pages/NotFound";
+import Terminos from "./pages/Terminos";
+import Privacidad from "./pages/Privacidad";
+import Seguridad from "./pages/Seguridad";
+import CookieBanner from "./components/CookieBanner";
 
 const queryClient = new QueryClient();
 
@@ -89,8 +93,12 @@ const App = () => (
               <Route path="/sintomas" element={<SintomaChecker />} />
               <Route path="/notas-clinicas" element={<NotasClinicas />} />
               <Route path="/diagnostico-imagen" element={<DiagnosticoImagen />} />
+              <Route path="/terminos" element={<Terminos />} />
+              <Route path="/privacidad" element={<Privacidad />} />
+              <Route path="/seguridad" element={<Seguridad />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <CookieBanner />
           </ViewProvider>
         </AuthProvider>
       </BrowserRouter>

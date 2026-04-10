@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getDashboardPath } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,10 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptMarketing, setAcceptMarketing] = useState(false);
 
-  const resetForm = () => { setEmail(""); setPassword(""); setNewPassword(""); setFullName(""); setPhone(""); setError(""); setSuccess(""); setShowPassword(false); };
+  const resetForm = () => { setEmail(""); setPassword(""); setNewPassword(""); setFullName(""); setPhone(""); setError(""); setSuccess(""); setShowPassword(false); setAcceptTerms(false); setAcceptMarketing(false); };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
@@ -81,9 +83,11 @@ const Auth = () => {
   };
 
   const handleRegister = async (e: React.FormEvent, role: "patient" | "doctor" | "pharmacy") => {
-    e.preventDefault(); setLoading(true); setError("");
+    e.preventDefault();
+    if (!acceptTerms) { setError("Debes aceptar los Términos y Condiciones para continuar."); return; }
+    setLoading(true); setError("");
     const redirectUrl = `${window.location.origin}/email-confirmado`;
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email, password,
       options: {
         emailRedirectTo: redirectUrl,
@@ -94,6 +98,14 @@ const Auth = () => {
       if (error.message.includes("already registered")) { setError("Este correo ya tiene una cuenta. Iniciá sesión en su lugar."); }
       else { setError("Ocurrió un error al crear tu cuenta. Intentá de nuevo."); }
     } else {
+      // Guardar consentimiento en profiles (best-effort — el trigger puede tardar)
+      if (data.user) {
+        await supabase.from("profiles").update({
+          terminos_aceptados_at: new Date().toISOString(),
+          terminos_version: "1.0",
+          marketing_consent: acceptMarketing,
+        }).eq("user_id", data.user.id);
+      }
       setSuccess("¡Cuenta creada! Revisá tu correo para confirmar tu cuenta y acceder a iMed.");
     }
     setLoading(false);
@@ -235,8 +247,22 @@ const Auth = () => {
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
                       </div>
                     </div>
+                    <div className="space-y-3 pt-1">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-blue-600" />
+                        <span className="text-xs text-gray-600 leading-relaxed">
+                          Acepto los{" "}<Link to="/terminos" className="text-blue-600 hover:underline font-medium" target="_blank">Términos y Condiciones</Link>{" "}y la{" "}<Link to="/privacidad" className="text-blue-600 hover:underline font-medium" target="_blank">Política de Privacidad</Link>{" "}de iMed. <span className="text-red-500">*</span>
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" checked={acceptMarketing} onChange={(e) => setAcceptMarketing(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-blue-600" />
+                        <span className="text-xs text-gray-600 leading-relaxed">
+                          Acepto recibir comunicaciones y novedades de iMed por correo (opcional).
+                        </span>
+                      </label>
+                    </div>
                     {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-700 text-sm font-medium">{error}</p></div>}
-                    <Button type="submit" disabled={loading} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl shadow-md">{loading ? "Creando cuenta..." : "Crear mi cuenta de Paciente"}</Button>
+                    <Button type="submit" disabled={loading || !acceptTerms} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl shadow-md disabled:opacity-50 disabled:cursor-not-allowed">{loading ? "Creando cuenta..." : "Crear mi cuenta de Paciente"}</Button>
                   </form>
                 )}
                 {!success && (<div className="mt-5 text-center border-t border-gray-100 pt-5"><p className="text-gray-500 text-sm mb-2">¿Ya tienes cuenta?</p><button onClick={() => { resetForm(); setMode("login"); }} className="text-blue-600 hover:text-blue-800 font-semibold underline underline-offset-2 text-sm">Iniciar sesión</button></div>)}
@@ -286,8 +312,22 @@ const Auth = () => {
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
                       </div>
                     </div>
+                    <div className="space-y-3 pt-1">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-green-600" />
+                        <span className="text-xs text-gray-600 leading-relaxed">
+                          Acepto los{" "}<Link to="/terminos" className="text-green-600 hover:underline font-medium" target="_blank">Términos y Condiciones</Link>{" "}y la{" "}<Link to="/privacidad" className="text-green-600 hover:underline font-medium" target="_blank">Política de Privacidad</Link>{" "}de iMed. <span className="text-red-500">*</span>
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" checked={acceptMarketing} onChange={(e) => setAcceptMarketing(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-green-600" />
+                        <span className="text-xs text-gray-600 leading-relaxed">
+                          Acepto recibir comunicaciones y novedades de iMed por correo (opcional).
+                        </span>
+                      </label>
+                    </div>
                     {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-700 text-sm font-medium">{error}</p></div>}
-                    <Button type="submit" disabled={loading} className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-xl shadow-md">{loading ? "Creando cuenta..." : "Crear mi cuenta de Médico"}</Button>
+                    <Button type="submit" disabled={loading || !acceptTerms} className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-xl shadow-md disabled:opacity-50 disabled:cursor-not-allowed">{loading ? "Creando cuenta..." : "Crear mi cuenta de Médico"}</Button>
                   </form>
                 )}
                 {!success && (<div className="mt-5 text-center border-t border-gray-100 pt-5"><p className="text-gray-500 text-sm mb-2">¿Ya tienes cuenta?</p><button onClick={() => { resetForm(); setMode("login"); }} className="text-green-600 hover:text-green-800 font-semibold underline underline-offset-2 text-sm">Iniciar sesión</button></div>)}
@@ -337,8 +377,22 @@ const Auth = () => {
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
                       </div>
                     </div>
+                    <div className="space-y-3 pt-1">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-orange-600" />
+                        <span className="text-xs text-gray-600 leading-relaxed">
+                          Acepto los{" "}<Link to="/terminos" className="text-orange-600 hover:underline font-medium" target="_blank">Términos y Condiciones</Link>{" "}y la{" "}<Link to="/privacidad" className="text-orange-600 hover:underline font-medium" target="_blank">Política de Privacidad</Link>{" "}de iMed. <span className="text-red-500">*</span>
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" checked={acceptMarketing} onChange={(e) => setAcceptMarketing(e.target.checked)} className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-orange-600" />
+                        <span className="text-xs text-gray-600 leading-relaxed">
+                          Acepto recibir comunicaciones y novedades de iMed por correo (opcional).
+                        </span>
+                      </label>
+                    </div>
                     {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"><p className="text-red-700 text-sm font-medium">{error}</p></div>}
-                    <Button type="submit" disabled={loading} className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base rounded-xl shadow-md">{loading ? "Creando cuenta..." : "Crear mi cuenta de Farmacia"}</Button>
+                    <Button type="submit" disabled={loading || !acceptTerms} className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base rounded-xl shadow-md disabled:opacity-50 disabled:cursor-not-allowed">{loading ? "Creando cuenta..." : "Crear mi cuenta de Farmacia"}</Button>
                     {!success && (<div className="mt-5 text-center border-t border-gray-100 pt-5"><p className="text-gray-500 text-sm mb-2">¿Ya tenés cuenta?</p><button onClick={() => { resetForm(); setMode("login"); }} className="text-orange-600 hover:text-orange-800 font-semibold underline underline-offset-2 text-sm">Iniciar sesión</button></div>)}
                   </form>
                 )}

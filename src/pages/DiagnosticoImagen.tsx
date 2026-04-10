@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { functionsClient } from "@/integrations/supabase/functionsClient";
 import Header from "@/components/Header";
+import MedicalDisclaimer from "@/components/MedicalDisclaimer";
 import { Button } from "@/components/ui/button";
 import {
   Upload, Image as ImageIcon, AlertTriangle, CheckCircle,
@@ -126,12 +127,8 @@ export default function DiagnosticoImagen() {
         </div>
 
         {/* Disclaimer banner */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-3 mb-6">
-          <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-blue-700 leading-relaxed">
-            <strong>Segunda opinión de IA.</strong> Este análisis es orientativo y no reemplaza la evaluación
-            de un médico. Los resultados deben ser validados por un profesional de salud.
-          </p>
+        <div className="mb-6">
+          <MedicalDisclaimer />
         </div>
 
         <div className="space-y-5">

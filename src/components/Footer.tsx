@@ -58,22 +58,22 @@ const Footer = () => {
             
             <div>
               <h3 className="text-sm font-semibold uppercase text-primary tracking-wider">
-                Información
+                Legal y Seguridad
               </h3>
               <ul className="mt-4 space-y-2">
                 <li>
-                  <Link to="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                    Sobre nosotros
-                  </Link>
-                </li>
-                <li>
-                  <Link to="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Link to="/terminos" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Términos y condiciones
                   </Link>
                 </li>
                 <li>
-                  <Link to="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Link to="/privacidad" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Política de privacidad
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/seguridad" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                    Seguridad
                   </Link>
                 </li>
               </ul>

@@ -45,6 +45,9 @@ import NotFound from "./pages/NotFound";
 import Terminos from "./pages/Terminos";
 import Privacidad from "./pages/Privacidad";
 import Seguridad from "./pages/Seguridad";
+import Epidemiologia from "./pages/Epidemiologia";
+import MisEstadisticas from "./pages/MisEstadisticas";
+import Empresas from "./pages/Empresas";
 import CookieBanner from "./components/CookieBanner";
 
 const queryClient = new QueryClient();
@@ -96,6 +99,9 @@ const App = () => (
               <Route path="/terminos" element={<Terminos />} />
               <Route path="/privacidad" element={<Privacidad />} />
               <Route path="/seguridad" element={<Seguridad />} />
+              <Route path="/epidemiologia" element={<Epidemiologia />} />
+              <Route path="/mis-estadisticas" element={<MisEstadisticas />} />
+              <Route path="/empresas" element={<Empresas />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <CookieBanner />

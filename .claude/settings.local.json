@@ -10,7 +10,27 @@
       "Bash(npx supabase:*)",
       "Bash(FUNCTIONS_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzbWp4ZG9ib2F4cGJtdW9wcm9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODE5NTYsImV4cCI6MjA4OTQ1Nzk1Nn0.KnBC3PNZIEpvtn3jSw8M6octoXcBHFh1XPb7CQsW968\")",
       "Bash(curl -s -X POST \"https://usmjxdoboaxpbmuoproo.supabase.co/functions/v1/analyze-medicine\" -H \"Authorization: Bearer $FUNCTIONS_KEY\" -H \"apikey: $FUNCTIONS_KEY\" -H \"Content-Type: application/json\" -d '{\"\"image\"\":\"\"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==\"\",\"\"mimeType\"\":\"\"image/jpeg\"\"}')",
-      "Bash(grep -n \"precio_consulta\\\\|doctor_profiles\" /Users/luisancabrera/Desktop/guate-salud-digital-main/supabase/migrations/*.sql)"
+      "Bash(grep -n \"precio_consulta\\\\|doctor_profiles\" /Users/luisancabrera/Desktop/guate-salud-digital-main/supabase/migrations/*.sql)",
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)",
+      "Bash(xargs ls:*)",
+      "Bash(npx vercel:*)",
+      "Bash(grep -l \"toggle_feed_like\\\\|get_investor_metrics\\\\|farmacia_ubicacion\\\\|mensajes_chat\" /Users/luisancabrera/Desktop/guate-salud-digital-main/supabase/migrations/*.sql)",
+      "Bash(git push:*)",
+      "Bash(sed -n '61,75p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/SintomaChecker.tsx)",
+      "Bash(sed -n '107,120p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/DiagnosticoImagen.tsx)",
+      "Bash(sed -n '51,63p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/Expediente.tsx)",
+      "Bash(sed -n '753,770p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/NotasClinicas.tsx)",
+      "Bash(sed -n '225,240p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/Expediente.tsx)",
+      "Bash(sed -n '777,795p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/NotasClinicas.tsx)",
+      "Bash(sed -n '1,5p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/DiagnosticoImagen.tsx)",
+      "Bash(sed -n '118,135p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/DiagnosticoImagen.tsx)",
+      "Bash(sed -n '1,10p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/Expediente.tsx)",
+      "Bash(sed -n '230,250p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/Expediente.tsx)",
+      "Bash(sed -n '1,6p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/NotasClinicas.tsx)",
+      "Bash(sed -n '793,815p' /Users/luisancabrera/Desktop/guate-salud-digital-main/src/pages/NotasClinicas.tsx)",
+      "Bash(git reset:*)",
+      "Bash(/Users/luisancabrera/Desktop/guate-salud-digital-main/supabase/config.toml:*)"
     ]
   }
 }

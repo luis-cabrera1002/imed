@@ -20,3 +20,5 @@ verify_jwt = false
 
 [functions.drug-interactions]
 verify_jwt = false
+[functions.create-room]
+verify_jwt = false

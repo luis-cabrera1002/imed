@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Search, Menu, User, LogOut, ChevronDown, Scan,
   Building2, Stethoscope, Calendar, Pill, FileText,
-  Heart, Home, Clock, LayoutDashboard, Store, Shield, Globe, MessageCircle, MapPin, TrendingUp, Brain
+  Heart, Home, Clock, LayoutDashboard, Store, Shield, Globe, MessageCircle, MapPin, TrendingUp, Brain, Activity, BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -73,6 +73,8 @@ const Header = () => {
     { to: "/mapa-farmacias", label: "Mapa Farmacias", icon: MapPin },
     { to: "/feed", label: "Feed Social", icon: TrendingUp },
     { to: "/sintomas", label: "Síntoma Checker", icon: Brain },
+    { to: "/epidemiologia", label: "Epidemiología", icon: Activity },
+    { to: "/empresas", label: "iMed Empresas", icon: Building2 },
   ];
   
   return (
@@ -183,12 +185,20 @@ const Header = () => {
                   )}
                   {/* Dashboard Doctor */}
                   {role === 'doctor' && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/doctor-dashboard" className="flex items-center gap-2 cursor-pointer font-medium text-primary">
-                        <LayoutDashboard className="h-4 w-4" />
-                        Mi Dashboard
-                      </Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/doctor-dashboard" className="flex items-center gap-2 cursor-pointer font-medium text-primary">
+                          <LayoutDashboard className="h-4 w-4" />
+                          Mi Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/mis-estadisticas" className="flex items-center gap-2 cursor-pointer">
+                          <BarChart3 className="h-4 w-4" />
+                          Mis Estadísticas
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                   {/* Dashboard Farmacia */}
                   {role === 'pharmacy' && (

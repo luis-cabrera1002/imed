@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { functionsClient } from "@/integrations/supabase/functionsClient";
 import Header from "@/components/Header";
-import { Send, MessageCircle, Calendar, ChevronLeft } from "lucide-react";
+import { Send, MessageCircle, Calendar, ChevronLeft, Video, VideoOff, X, Loader2 } from "lucide-react";
 
 interface Cita {
   id: string;
@@ -43,6 +44,12 @@ export default function Chat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
 
+  // Telemedicina state
+  const [videoActive, setVideoActive] = useState(false);
+  const [roomUrl, setRoomUrl] = useState<string | null>(null);
+  const [loadingRoom, setLoadingRoom] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+
   useEffect(() => {
     init();
   }, []);
@@ -52,7 +59,6 @@ export default function Chat() {
     if (!u) { navigate("/auth"); return; }
     setUser(u);
 
-    // Get role
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -61,7 +67,6 @@ export default function Chat() {
     const userRole = profile?.role ?? "patient";
     setRole(userRole);
 
-    // Load citas (as patient or doctor)
     const isDoctor = userRole === "doctor";
     const idField = isDoctor ? "doctor_id" : "paciente_id";
     const otherField = isDoctor ? "paciente_id" : "doctor_id";
@@ -74,7 +79,6 @@ export default function Chat() {
 
     if (!citasData) { setLoadingCitas(false); return; }
 
-    // Resolve names for the "other" party
     const otherIds = [...new Set(citasData.map((c: any) => c[otherField]))];
     const { data: perfiles } = otherIds.length > 0
       ? await supabase.from("profiles").select("user_id, full_name").in("user_id", otherIds)
@@ -94,7 +98,6 @@ export default function Chat() {
     setCitas(citasList);
     setLoadingCitas(false);
 
-    // Auto-select from URL param
     if (citaIdParam) {
       const found = citasList.find(c => c.id === citaIdParam);
       if (found) selectCita(found, u.id);
@@ -109,7 +112,6 @@ export default function Chat() {
       .order("created_at", { ascending: true });
     setMensajes(data ?? []);
 
-    // Mark unread messages as read
     if (data && data.length > 0) {
       const unread = data.filter((m: Mensaje) => !m.leido && m.sender_id !== userId);
       if (unread.length > 0) {
@@ -123,10 +125,12 @@ export default function Chat() {
 
   function selectCita(cita: Cita, userId?: string) {
     setSelectedCita(cita);
+    setVideoActive(false);
+    setRoomUrl(null);
+    setVideoError(null);
     const uid = userId ?? user?.id;
     if (!uid) return;
 
-    // Unsubscribe old channel
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
@@ -134,7 +138,6 @@ export default function Chat() {
 
     loadMensajes(cita.id, uid);
 
-    // Subscribe to realtime inserts for this cita
     const channel = supabase
       .channel(`chat-${cita.id}`)
       .on(
@@ -142,11 +145,9 @@ export default function Chat() {
         { event: "INSERT", schema: "public", table: "mensajes_chat", filter: `cita_id=eq.${cita.id}` },
         (payload) => {
           setMensajes(prev => {
-            // Avoid duplicates
             if (prev.some(m => m.id === payload.new.id)) return prev;
             return [...prev, payload.new as Mensaje];
           });
-          // Mark as read if not sender
           if (payload.new.sender_id !== uid) {
             supabase.from("mensajes_chat").update({ leido: true }).eq("id", payload.new.id);
           }
@@ -157,14 +158,12 @@ export default function Chat() {
     channelRef.current = channel;
   }
 
-  // Cleanup realtime on unmount
   useEffect(() => {
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
     };
   }, []);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensajes]);
@@ -182,11 +181,58 @@ export default function Chat() {
       mensaje: msg,
     });
 
-    if (error) {
-      // Re-put text if failed
-      setTexto(msg);
-    }
+    if (error) setTexto(msg);
     setEnviando(false);
+  }
+
+  async function iniciarVideollamada() {
+    if (!selectedCita) return;
+    setLoadingRoom(true);
+    setVideoError(null);
+
+    try {
+      // Verificar si ya existe una sala para esta cita
+      const { data: existing } = await supabase
+        .from("video_consultas")
+        .select("room_url")
+        .eq("cita_id", selectedCita.id)
+        .eq("estado", "activa")
+        .maybeSingle();
+
+      if (existing?.room_url) {
+        setRoomUrl(existing.room_url);
+        setVideoActive(true);
+        setLoadingRoom(false);
+        return;
+      }
+
+      // Crear nueva sala via Edge Function
+      const { data, error } = await functionsClient.functions.invoke("create-room", {
+        body: { cita_id: selectedCita.id },
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data?.room_url) throw new Error("No se recibió URL de la sala");
+
+      // Guardar en video_consultas
+      await supabase.from("video_consultas").insert({
+        cita_id: selectedCita.id,
+        room_url: data.room_url,
+        room_name: data.room_name ?? null,
+      });
+
+      setRoomUrl(data.room_url);
+      setVideoActive(true);
+    } catch (err: any) {
+      setVideoError(err.message ?? "Error creando videollamada");
+    } finally {
+      setLoadingRoom(false);
+    }
+  }
+
+  function cerrarVideo() {
+    setVideoActive(false);
+    setRoomUrl(null);
   }
 
   const estadoColor: Record<string, string> = {
@@ -196,9 +242,46 @@ export default function Chat() {
     cancelada: "bg-red-100 text-red-600",
   };
 
+  const puedeVideoLlamar = selectedCita &&
+    (selectedCita.estado === "confirmada" || selectedCita.estado === "pendiente" || selectedCita.estado === "completada");
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
+
+      {/* Modal de videollamada */}
+      {videoActive && roomUrl && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-900">
+            <div className="flex items-center gap-2">
+              <Video className="w-5 h-5 text-green-400" />
+              <span className="text-white font-semibold text-sm">
+                Videollamada con {selectedCita?.otro_nombre}
+              </span>
+              <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                EN VIVO
+              </span>
+            </div>
+            <button
+              onClick={cerrarVideo}
+              className="text-gray-400 hover:text-white p-1.5 hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <iframe
+            src={roomUrl}
+            allow="camera; microphone; fullscreen; display-capture; autoplay"
+            className="flex-1 w-full border-0"
+            title="Videollamada iMed"
+          />
+          <div className="bg-gray-900 px-4 py-2 text-center">
+            <p className="text-xs text-gray-400">
+              AliMed transcribe automáticamente la consulta cuando finalices la llamada
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
         <div className="flex items-center gap-3 mb-6">
@@ -267,11 +350,54 @@ export default function Chat() {
                   <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-900 text-sm flex-shrink-0">
                     {selectedCita.otro_nombre.charAt(0)}
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 text-sm">{selectedCita.otro_nombre}</p>
                     <p className="text-xs text-gray-400">{formatFecha(selectedCita.fecha)} · {selectedCita.hora.substring(0, 5)}</p>
                   </div>
+
+                  {/* Botón videollamada */}
+                  {puedeVideoLlamar && (
+                    <button
+                      onClick={iniciarVideollamada}
+                      disabled={loadingRoom}
+                      title="Iniciar videollamada"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                    >
+                      {loadingRoom ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Video className="w-3.5 h-3.5" />
+                      )}
+                      {loadingRoom ? "Conectando..." : "Videollamada"}
+                    </button>
+                  )}
                 </div>
+
+                {/* Video error banner */}
+                {videoError && (
+                  <div className="px-4 py-2 bg-red-50 border-b border-red-100 flex items-center justify-between">
+                    <p className="text-xs text-red-600">{videoError}</p>
+                    <button onClick={() => setVideoError(null)} className="text-red-400 hover:text-red-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Video activo — banner de sala abierta */}
+                {roomUrl && !videoActive && (
+                  <div className="px-4 py-2 bg-green-50 border-b border-green-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <VideoOff className="w-4 h-4 text-green-600" />
+                      <p className="text-xs text-green-700 font-medium">Sala de videollamada activa</p>
+                    </div>
+                    <button
+                      onClick={() => setVideoActive(true)}
+                      className="text-xs text-green-700 font-semibold hover:underline"
+                    >
+                      Volver a abrir
+                    </button>
+                  </div>
+                )}
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">

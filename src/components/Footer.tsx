@@ -102,9 +102,14 @@ const Footer = () => {
           
           <div className="pt-8 mt-8 border-t border-border/50">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">
-                © {new Date().getFullYear()} iMed Guatemala. Todos los derechos reservados.
-              </p>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs text-muted-foreground">
+                  © 2026 iMed Guatemala. Todos los derechos reservados.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Marca registrada en Guatemala.
+                </p>
+              </div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 Hecho con <Heart className="w-3 h-3 text-destructive fill-destructive" /> en Guatemala
               </p>

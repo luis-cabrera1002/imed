@@ -22,3 +22,9 @@ verify_jwt = false
 verify_jwt = false
 [functions.create-room]
 verify_jwt = false
+
+[functions.health-predictor]
+verify_jwt = false
+
+[functions.smart-alerts]
+verify_jwt = false

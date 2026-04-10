@@ -11,8 +11,15 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Calendar, Clock, Stethoscope, FileText, MapPin,
   Search, User, Activity, LogOut, Star, Shield, Bell, Scan,
-  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, MessageCircle, Store, ClipboardList, Trophy, CheckCircle2, ArrowRight, UserPlus
+  ChevronRight, Eye, TrendingUp, Heart, Upload, Trash2, Download, FolderOpen, Pill, Brain, Sparkles, AlertCircle, RefreshCw, Globe, MessageCircle, Store, ClipboardList, Trophy, CheckCircle2, ArrowRight, UserPlus, X, Info, AlertTriangle
 } from "lucide-react";
+
+interface SmartAlert {
+  tipo: string;
+  mensaje: string;
+  urgencia: "info" | "warning" | "danger";
+  accion?: string | null;
+}
 
 const ESTADO: Record<string, { label: string; color: string; dot: string }> = {
   pendiente:  { label: "Pendiente",  color: "bg-yellow-100 text-yellow-700 border-yellow-200", dot: "bg-yellow-400" },
@@ -45,6 +52,8 @@ export default function PatientDashboard() {
   const [expediente, setExpediente]   = useState<any>(null);
   const [recordatoriosCount, setRecordatoriosCount] = useState(0);
   const [referencias, setReferencias] = useState<any[]>([]);
+  const [smartAlerts, setSmartAlerts] = useState<SmartAlert[]>([]);
+  const [alertsDismissed, setAlertsDismissed] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!user) { navigate("/auth"); return; }
@@ -55,6 +64,39 @@ export default function PatientDashboard() {
     setLoading(true);
     await Promise.all([loadPerfil(uid), loadCitas(uid), loadRecetas(uid), loadEscaneos(uid), loadDocumentos(uid), loadExpediente(uid), loadRecordatorios(uid), loadNotasCompartidas(uid), loadReferencias(uid)]);
     setLoading(false);
+    // Cargar alertas inteligentes en background (no bloquea la UI)
+    loadSmartAlerts(uid);
+  }
+
+  async function loadSmartAlerts(uid: string) {
+    try {
+      const [expRes, citasRes] = await Promise.all([
+        supabase.from("expediente_medico").select("condiciones,medicamentos_activos,peso,altura").eq("user_id", uid).maybeSingle(),
+        supabase.from("citas").select("fecha").eq("paciente_id", uid).eq("estado", "completada").order("fecha", { ascending: false }).limit(1),
+      ]);
+      const exp = expRes.data;
+      const citasData = citasRes.data;
+
+      let imc: string | null = null;
+      if (exp?.peso && exp?.altura) {
+        const altM = (exp.altura as number) / 100;
+        imc = ((exp.peso as number) / (altM * altM)).toFixed(1);
+      }
+
+      const { data } = await functionsClient.functions.invoke("smart-alerts", {
+        body: {
+          paciente: {
+            imc,
+            condiciones: (exp as any)?.condiciones ?? [],
+            medicamentos: (exp as any)?.medicamentos_activos ?? [],
+            ultima_cita: (citasData as any)?.[0]?.fecha ?? null,
+          },
+        },
+      });
+      if (data?.alertas) setSmartAlerts(data.alertas);
+    } catch {
+      // Silencioso — alertas son opcionales
+    }
   }
 
   async function loadEscaneos(uid: string) {
@@ -314,6 +356,69 @@ export default function PatientDashboard() {
         {/* ══════════ INICIO ══════════ */}
         {activeTab === "Inicio" && (
           <div className="space-y-6">
+
+            {/* ── Alertas Inteligentes iMed Brain ── */}
+            {smartAlerts.filter((_, i) => !alertsDismissed.has(i)).length > 0 && (
+              <div className="space-y-2">
+                {smartAlerts.map((alert, i) => {
+                  if (alertsDismissed.has(i)) return null;
+                  const colors = {
+                    info:    "bg-blue-50 border-blue-200 text-blue-800",
+                    warning: "bg-yellow-50 border-yellow-300 text-yellow-900",
+                    danger:  "bg-red-50 border-red-300 text-red-900",
+                  };
+                  const icons = {
+                    info:    <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-500" />,
+                    warning: <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-600" />,
+                    danger:  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-500" />,
+                  };
+                  return (
+                    <div key={i} className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-sm ${colors[alert.urgencia]}`}>
+                      {icons[alert.urgencia]}
+                      <span className="flex-1 leading-relaxed">{alert.mensaje}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {alert.accion && (
+                          <button onClick={() => navigate(alert.accion!)} className="font-semibold underline text-xs hover:no-underline">
+                            Ver
+                          </button>
+                        )}
+                        <button onClick={() => setAlertsDismissed(prev => new Set([...prev, i]))} className="opacity-50 hover:opacity-100">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── Card Mi Salud IA — iMed Brain ── */}
+            <button
+              onClick={() => navigate("/mi-salud-ia")}
+              className="w-full text-left relative overflow-hidden rounded-2xl p-5 bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all duration-200"
+            >
+              <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white opacity-5" />
+              <div className="absolute -bottom-8 right-20 w-36 h-36 rounded-full bg-cyan-300 opacity-10" />
+              <div className="relative flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Brain className="w-5 h-5 text-white" />
+                    <span className="text-white font-black text-lg tracking-tight">Mi Salud IA</span>
+                    <span className="flex items-center gap-1 bg-white/15 border border-white/25 rounded-full px-2 py-0.5 ml-1">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+                      </span>
+                      <span className="text-white/80 font-bold text-xs">iMed Brain 🧠</span>
+                    </span>
+                  </div>
+                  <p className="text-blue-100/80 text-sm">Analizá tus riesgos de salud · Edad biológica · Recomendaciones IA</p>
+                </div>
+                <div className="flex-shrink-0 w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white text-xl">
+                  →
+                </div>
+              </div>
+            </button>
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

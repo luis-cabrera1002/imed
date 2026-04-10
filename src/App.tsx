@@ -48,6 +48,8 @@ import Seguridad from "./pages/Seguridad";
 import Epidemiologia from "./pages/Epidemiologia";
 import MisEstadisticas from "./pages/MisEstadisticas";
 import Empresas from "./pages/Empresas";
+import MiSaludIA from "./pages/MiSaludIA";
+import ImedBrain from "./pages/ImedBrain";
 import CookieBanner from "./components/CookieBanner";
 
 const queryClient = new QueryClient();
@@ -102,6 +104,8 @@ const App = () => (
               <Route path="/epidemiologia" element={<Epidemiologia />} />
               <Route path="/mis-estadisticas" element={<MisEstadisticas />} />
               <Route path="/empresas" element={<Empresas />} />
+              <Route path="/mi-salud-ia" element={<MiSaludIA />} />
+              <Route path="/imed-brain" element={<ImedBrain />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <CookieBanner />

@@ -124,6 +124,14 @@ const Header = () => {
           </DropdownMenu>
 
           <Link
+            to="/imed-brain"
+            className="px-3 py-2 text-sm font-bold text-cyan-600 hover:text-cyan-500 hover:bg-cyan-50 rounded-lg transition-all duration-200 flex items-center gap-1.5"
+          >
+            <Brain className="w-3.5 h-3.5" />
+            iMed Brain
+          </Link>
+
+          <Link
             to="/guia-adultos"
             className="px-3 py-2 text-sm font-medium text-secondary hover:text-secondary/80 hover:bg-secondary/10 rounded-lg transition-all duration-200"
           >
@@ -316,6 +324,15 @@ const Header = () => {
                     
                     <div className="h-px bg-border/50 my-2" />
                     
+                    <Link
+                      to="/imed-brain"
+                      className="flex items-center gap-3 px-3 py-3 text-sm font-bold rounded-xl bg-cyan-50 text-cyan-700 hover:bg-cyan-100 transition-all"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Brain className="h-5 w-5" />
+                      iMed Brain 🧠
+                    </Link>
+
                     <Link
                       to="/guia-adultos"
                       className="flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-xl bg-secondary/10 text-secondary hover:bg-secondary/15 transition-all"

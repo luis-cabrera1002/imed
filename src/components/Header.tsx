@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Search, Menu, User, LogOut, ChevronDown, Scan,
   Building2, Stethoscope, Calendar, Pill, FileText,
-  Heart, Home, Clock, LayoutDashboard, Store, Shield, Globe, MessageCircle, MapPin, TrendingUp, Brain, Activity, BarChart3
+  Heart, Home, Clock, LayoutDashboard, Store, Shield, Globe, MessageCircle, MapPin, TrendingUp, Brain, Activity, BarChart3, Bot
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -184,12 +184,20 @@ const Header = () => {
                 <DropdownMenuGroup>
                   {/* Mi Dashboard — solo para pacientes */}
                   {role === 'patient' && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/patient-dashboard" className="flex items-center gap-2 cursor-pointer font-medium text-primary">
-                        <LayoutDashboard className="h-4 w-4" />
-                        Mi Dashboard
-                      </Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/patient-dashboard" className="flex items-center gap-2 cursor-pointer font-medium text-primary">
+                          <LayoutDashboard className="h-4 w-4" />
+                          Mi Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/copilot" className="flex items-center gap-2 cursor-pointer font-medium text-cyan-600">
+                          <Bot className="h-4 w-4" />
+                          iMed Copilot 🤖
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                   {/* Dashboard Doctor */}
                   {role === 'doctor' && (

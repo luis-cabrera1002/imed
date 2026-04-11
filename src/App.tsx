@@ -50,6 +50,7 @@ import MisEstadisticas from "./pages/MisEstadisticas";
 import Empresas from "./pages/Empresas";
 import MiSaludIA from "./pages/MiSaludIA";
 import ImedBrain from "./pages/ImedBrain";
+import Copilot from "./pages/Copilot";
 import CookieBanner from "./components/CookieBanner";
 
 const queryClient = new QueryClient();
@@ -106,6 +107,7 @@ const App = () => (
               <Route path="/empresas" element={<Empresas />} />
               <Route path="/mi-salud-ia" element={<MiSaludIA />} />
               <Route path="/imed-brain" element={<ImedBrain />} />
+              <Route path="/copilot" element={<Copilot />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <CookieBanner />

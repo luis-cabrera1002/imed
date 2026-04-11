@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Heart, Pill, AlertTriangle, Droplets, Weight, Ruler,
   Plus, X, Save, Edit2, ClipboardList, ArrowLeft, User,
-  ShieldAlert, ShieldCheck, Clock,
+  ShieldAlert, ShieldCheck, Clock, Bot,
 } from "lucide-react";
 import CardiovascularRisk from "@/components/CardiovascularRisk";
 
@@ -248,9 +248,19 @@ export default function Expediente() {
             )}
           </div>
           {!readOnly && !editing && (
-            <Button size="sm" onClick={() => setEditing(true)} className="gap-1.5">
-              <Edit2 className="w-3.5 h-3.5" /> Editar
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate("/copilot")}
+                className="gap-1.5 border-cyan-200 text-cyan-600 hover:bg-cyan-50"
+              >
+                <Bot className="w-3.5 h-3.5" /> Copilot
+              </Button>
+              <Button size="sm" onClick={() => setEditing(true)} className="gap-1.5">
+                <Edit2 className="w-3.5 h-3.5" /> Editar
+              </Button>
+            </div>
           )}
           {!readOnly && editing && (
             <div className="flex gap-2">

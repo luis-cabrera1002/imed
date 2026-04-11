@@ -420,6 +420,30 @@ export default function PatientDashboard() {
               </div>
             </button>
 
+            {/* ── Card iMed Copilot ── */}
+            <button
+              onClick={() => navigate("/copilot")}
+              className="w-full text-left relative overflow-hidden rounded-2xl p-5 bg-gradient-to-r from-[#0d1e35] via-[#0f2444] to-[#0d2a4a] border border-blue-500/20 shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all duration-200"
+            >
+              <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-blue-500 opacity-5" />
+              <div className="relative flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <MessageCircle className="w-5 h-5 text-cyan-400" />
+                    <span className="text-white font-black text-lg tracking-tight">iMed Copilot</span>
+                    <span className="flex items-center gap-1 bg-green-500/15 border border-green-500/25 rounded-full px-2 py-0.5 ml-1">
+                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                      <span className="text-green-400 font-bold text-xs">24/7</span>
+                    </span>
+                  </div>
+                  <p className="text-blue-300/70 text-sm">Tu médico personal con IA · Consultas · Emergencias</p>
+                </div>
+                <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center text-cyan-400 text-xl">
+                  →
+                </div>
+              </div>
+            </button>
+
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
